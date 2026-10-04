@@ -21,21 +21,38 @@ target_surfaces: []  # filled in §4 — subset of: backend-service | web-fronte
      ¶4 is the override slot — critic `Override` resolutions emit «Decision override: <headline>
      — rationale: <reason>» bullets here so downstream skills see the deliberate choice. -->
 
-**Intent.** <One paragraph from spec §2 Goals — what we're building and for whom.>
+**Intent.** Replace the starter that oden.abe.kth.se still serves with a minimal, honest front
+page in the group's own identity, and turn publishing into a safe mirror. The live site reflects
+what the maintainer publishes, a publish removes only files the site itself published or the
+maintainer approved, and it stops before deleting anything when the build or the target folder
+looks wrong. The feature serves visitors (prospective students, funders, peers), who must see only
+real content, readable and with no dead ends. It also serves the maintainer, who must be able to
+publish in minutes without manual server work and without endangering files others rely on in
+the shared university server folder. It covers roadmap step 1, the starter-cleanup half of step 8
+and a minimal slice of step 2 (spec §1).
 
-**Top-3 quality goals (1-liners; full scenarios in §10):**
+**Top quality goals (1-liners; full scenarios in §10):**
 
-1. <e.g. "Availability under partial failure of a downstream module">
-2. <e.g. "Read performance for the dashboard under data-scale growth">
-3. <e.g. "Recoverability with <30 min RTO">
+1. **Safety of the shared server folder.** A publish never changes a protected file, never deletes
+   a file it does not own or that was not approved, and stops before deleting when the build or
+   folder looks wrong. Routine removals are capped at ≤ 20 files per publish.
+2. **An accurate mirror.** What is live equals what was last published. 100% of the reviewed
+   starter addresses show the not-found page, and no navigation entry leads nowhere.
+3. **Readable and self-contained pages.** Text meets ≥ 4.5:1 (body) / ≥ 3:1 (large text, UI)
+   contrast, pages make 0 third-party requests, and fonts weigh ≤ 100 KB per page.
+4. **A fast, consistent publish.** Merge to live takes ≤ 10 min, and visitors can receive a mix
+   of old and new files for ≤ 5 s.
 
 **Stakeholders.**
 
 | Role | Interest | Sign-off owner? |
 |---|---|---|
-| <author role from glossary> | <feature usage> | No |
-| <consumer role from glossary> | <read usage> | No |
+| visitor | Sees only real group content, readable, with no dead ends (US-01–US-04, US-08) | No |
+| maintainer | Publishes in minutes; reviews the server listing; decides what is protected and what is removed (US-05–US-07) | Yes — accepts the before/after identity screenshot and every removal approval |
+| Non-maintainer contributor (group member or outside contributor) | May propose changes; must never change the live site or the publishing rules unreviewed (AC-08) | No |
+| KTH IT | Runs the server and may place files in the shared folder; those files must survive (AC-13) | No |
 | Tech Lead | SAD approval | Yes |
+| Security Lead | Required security review — first time a publish deletes files on a shared university server (spec §6.1) | Yes |
 
 <!-- Decision overrides (¶4) — populated by the critic resolution loop, empty otherwise. -->
 
