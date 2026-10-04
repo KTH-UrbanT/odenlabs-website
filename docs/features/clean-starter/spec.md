@@ -176,7 +176,13 @@ Traceability: KTH requires its websites to follow its accessibility, GDPR and on
 
 **Given** a file appears in the server folder that the site never published and the maintainer never reviewed, such as one added by KTH IT
 **When** the maintainer publishes
-**Then** the file is left in place, the publish goes ahead, and the file is reported to the maintainers for a keep-or-remove decision — on every publish until it is marked protected or approved for removal
+**Then** the file is left in place, the publish goes ahead (unless the file is in the way of the build — AC-13b), and the file is reported to the maintainers for a keep-or-remove decision — on every publish until it is marked protected or approved for removal
+
+### AC-13b (US-06) — error <!-- added-by-fix: review 2026-10-04 (2nd pass), R-03 -->
+
+**Given** a file or folder in the server folder that the site does not own (unknown or protected) occupies an address the build needs — it sits where the build writes a file of the same name as a folder, or inside a folder the build writes as a file, or a parent on the way is a link
+**When** the maintainer publishes
+**Then** the publish stops before any change and tells the maintainer which check failed (`layout-clash`) and which path is in the way; the file itself is left untouched
 
 ### AC-14 (US-07) — happy path
 
@@ -209,7 +215,7 @@ Traceability: KTH requires its websites to follow its accessibility, GDPR and on
 - **AuthZ/AuthN impact:** only maintainers may change the protected-file list, approve removals or switch deletion on; the server-folder listing is readable only by maintainers. Proposed changes from anyone else take effect only after a maintainer accepts them. Listings and removal reports go to every maintainer through a maintainer-only route; a maintainer may approve removals in their own change (there is one maintainer today).
 - **Abuse cases:**
   - Wrong or empty target folder (misconfigured publish destination): the publish refuses to delete when the folder does not contain the site's previously published files, and never removes more than the routine limit without an approved list — blast radius capped before anything is lost.
-  - Protected-list drift (files added to the folder after the review, e.g. certificate renewal or access rules): unknown files are never deleted silently and never block a publish; they are reported on every publish until a keep-or-remove decision is made.
+  - Protected-list drift (files added to the folder after the review, e.g. certificate renewal or access rules): unknown files are never deleted silently and never block a publish unless one is in the way of the build (AC-13b), in which case the publish stops before any change; they are reported on every publish until a keep-or-remove decision is made.
   - Listing leak through public project records: the listing is delivered only to maintainers, never into publicly readable output such as publish logs.
   - A contribution from a non-maintainer that changes the publishing rules: it takes effect only after a maintainer accepts it, and checks run on proposed changes without access to the server.
   - Visitor tracking through third-party fonts or assets: zero third-party requests per page.
@@ -231,3 +237,5 @@ Traceability: KTH requires its websites to follow its accessibility, GDPR and on
 - [ ] Can the KTH server switch from the old version of the site to the new one in a single step, and must protected files stay untouched or may they be carried into the new version? Default now: files are copied one by one and protected files stay untouched; the ≤ 5 s mixed-version target stands until design shows it cannot be met. — owner: pasichnyi, due: before sdd:design
 - [ ] Front-page copy: the who-we-are paragraph and the contact route (US-08). Default now: none — the maintainer writes it. Until it arrives AC-15 is unmet and T5 is blocked (review 2026-10-04). — owner: pasichnyi, due: 2026-10-18
 - [ ] Identity (AC-05): which self-hosted fonts, and who signs off the before/after screenshot? Default now: the inherited starter tokens and system font stack stay, so AC-05 is unmet, AC-02's "group's look" means the inherited tokens, and AC-06 is re-run once the real palette lands. T6 and the font-budget half of T7 are blocked; the off-site-request guard is split off and ships now. Run `screens` and `plan-tests` before T5/T6 resume (review 2026-10-04). — owner: pasichnyi, due: 2026-10-18
+- [ ] Publish-worker follow-ups (review 2026-10-04, 2nd pass, R-05–R-08, deferred): R-06 a failed record read (I/O, missing `cat`, dropped SSH) is treated as an unreadable record and drops owned leftovers from the record; R-08 the code-owner import walk misses `export … from`, side-effect and dynamic imports; R-07 files moved by a swap that fails mid-way are in no record and later read as unknown; R-05 `swap-seconds` includes the pre-check. Default now: none of these occur on the current build and server; deletion stays off. Must be resolved before deletion is switched on. — owner: pasichnyi, due: 2026-10-18
+- [ ] Low-priority hardening (review 2026-10-04, 2nd pass, R-09, deferred): off-site scanner gaps (`object data`, `feImage`, `imagesrcset`, `image-set()`, `<base href>`, `/\host`, `http:/host`, built `.js` not scanned) and false positives on page text; `.markdown`-family pages skipped by the header; commented-out tokens counted as duplicates; unexpected errors after the interim seal skip the sealed report; post-publish URLs not percent-encoded; `[]?*` names can't be listed; build paths that clash with the worker's own files; three tests that don't exercise the failure they name. See `_review/review-2026-10-04-2.md`. — owner: pasichnyi, due: 2026-10-31

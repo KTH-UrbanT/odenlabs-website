@@ -28,11 +28,16 @@
 | T21 | Worker hardening: rules whitespace, timer locale, approved-in-build, limit diff (review F-06) | domain | pasichnyi | S        | T18                 | done    |
 | T22 | Carry leftover owned files in the record (review F-07)                                        | app    | pasichnyi | S        | T21                 | done    |
 | T23 | Docs sync after review (review F-06)                                                          | docs   | pasichnyi | S        | T16–T22             | done    |
+| T24 | Off-site guard: entity-encoded `url()` in style attributes (review R-01)                   | tests  | pasichnyi | S        | T17                 | todo    |
+| T25 | AC-03 build test against a real section page (review R-02)                                   | tests  | pasichnyi | S        | T20                 | todo    |
+| T26 | Docs sync: AC-13b, ownership table, CODEOWNERS rule, failure outcomes (review R-03, R-04)    | docs   | pasichnyi | S        | T24, T25            | todo    |
 
-**Total:** 23 tasks, ~11 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
+**Total:** 26 tasks, ~12 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 
 **Blocked (2026-10-04):** T5 waits for the front-page copy (who-we-are paragraph and
 contact route, spec §8). T6 waits for T5 and for the maintainer's font choice and
 before/after sign-off. T7 waits for T6.
 
 **Review follow-ups (2026-10-04):** T16–T23 done; deferrals and new due dates in spec §8.
+
+**Review follow-ups, 2nd pass (2026-10-04):** T24–T26 todo; R-05–R-09 deferred in spec §8.
