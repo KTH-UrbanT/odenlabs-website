@@ -1,0 +1,279 @@
+{
+  "slug": "clean-starter",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Add the ordered planned-sections list and the pure offered-sections helpers",
+      "layer": "domain",
+      "deps": [],
+      "acs": [
+        "AC-03",
+        "AC-04"
+      ],
+      "dod": "`tests/navigation.test.ts` passes, covering all-present, none-present and mistyped href (sad §10 QG-2)",
+      "files_hint": [
+        "src/data/sections.ts",
+        "src/lib/navigation.ts",
+        "tests/navigation.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t01-planned-sections.md"
+    },
+    {
+      "id": "T2",
+      "title": "Add the WCAG contrast check over the declared text/background pairs",
+      "layer": "domain",
+      "deps": [],
+      "acs": [
+        "AC-06"
+      ],
+      "dod": "`tests/contrast.test.ts` passes on the unit cases and fails on a deliberately broken fixture pair, naming it",
+      "files_hint": [
+        "src/lib/contrast.ts",
+        "src/styles/contrast-pairs.ts",
+        "tests/contrast.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t02-contrast-check.md"
+    },
+    {
+      "id": "T3",
+      "title": "Render only offered sections in the header and assert every header link resolves",
+      "layer": "ui",
+      "deps": [
+        "T1"
+      ],
+      "acs": [
+        "AC-03"
+      ],
+      "dod": "`dist/index.html` header contains no link to `/research/`, `/people/` or `/join/` while those pages do not exist",
+      "files_hint": [
+        "src/components/Header.astro",
+        "tests/build.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t03-header-offered-sections.md"
+    },
+    {
+      "id": "T4",
+      "title": "Add the not-found page with navigation, a link home and noindex",
+      "layer": "ui",
+      "deps": [],
+      "acs": [
+        "AC-02"
+      ],
+      "dod": "`dist/404.html` exists with `noindex`, the header and a link to `/`, asserted in `tests/build.test.ts`",
+      "files_hint": [
+        "src/pages/404.astro",
+        "src/layouts/Base.astro",
+        "tests/build.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t04-not-found-page.md"
+    },
+    {
+      "id": "T5",
+      "title": "Write the minimal who-we-are front page from the maintainer's copy",
+      "layer": "ui",
+      "deps": [],
+      "acs": [
+        "AC-15"
+      ],
+      "dod": "the front-page assertion in `tests/build.test.ts` passes, and the paragraph is the maintainer's copy word for word",
+      "files_hint": [
+        "src/pages/index.astro",
+        "tests/build.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t05-front-page.md"
+    },
+    {
+      "id": "T6",
+      "title": "Derive the palette and type from the logo, self-host the fonts, and get the before/after sign-off",
+      "layer": "ui",
+      "deps": [
+        "T2",
+        "T4",
+        "T5"
+      ],
+      "acs": [
+        "AC-05",
+        "AC-06"
+      ],
+      "dod": "`tests/contrast.test.ts` passes on the logo-derived tokens, fonts are self-hosted, `public/logo.svg` is unchanged, and the maintainer's before/after sign-off is recorded in the PR",
+      "files_hint": [
+        "src/styles/tokens.css",
+        "src/styles/global.css",
+        "src/styles/contrast-pairs.ts",
+        "public/fonts/"
+      ],
+      "file": "docs/features/clean-starter/tasks/t06-identity-palette-and-fonts.md"
+    },
+    {
+      "id": "T7",
+      "title": "Add build guards for zero off-site references and the per-page font budget",
+      "layer": "tests",
+      "deps": [
+        "T6"
+      ],
+      "acs": [
+        "AC-05"
+      ],
+      "dod": "both guards pass on the current build and fail on their planted fixtures",
+      "files_hint": [
+        "tests/build.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t07-build-guards.md"
+    },
+    {
+      "id": "T8",
+      "title": "Define the publish model: path normaliser, rules/settings/record parsers and the initial rules files",
+      "layer": "domain",
+      "deps": [],
+      "acs": [
+        "AC-07b",
+        "AC-12"
+      ],
+      "dod": "`tests/plan.test.ts` parser and normaliser cases pass; the real rules files parse",
+      "files_hint": [
+        "deploy/plan.ts",
+        "deploy/rules/",
+        "tests/plan.test.ts",
+        "tests/fixtures/publish.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t08-publish-model-and-rules.md"
+    },
+    {
+      "id": "T9",
+      "title": "Implement planPublish() classification and the upload / remove / list plan",
+      "layer": "domain",
+      "deps": [
+        "T8"
+      ],
+      "acs": [
+        "AC-01",
+        "AC-07",
+        "AC-07b",
+        "AC-10",
+        "AC-11",
+        "AC-13"
+      ],
+      "dod": "`tests/plan.test.ts` covers every row of the ownership table for deletion off and on",
+      "files_hint": [
+        "deploy/plan.ts",
+        "tests/plan.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t09-plan-classification.md"
+    },
+    {
+      "id": "T10",
+      "title": "Add the planner stop-guards: protected clash, missing front page/logo, record, removal limit, malformed path",
+      "layer": "domain",
+      "deps": [
+        "T9"
+      ],
+      "acs": [
+        "AC-11b",
+        "AC-12"
+      ],
+      "dod": "`tests/plan.test.ts` has a failing-input case for every guard (incl. 20 vs 21 removals and an off-by-one approved list), each stopping before any upload or removal and naming its check",
+      "files_hint": [
+        "deploy/plan.ts",
+        "tests/plan.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t10-plan-stop-guards.md"
+    },
+    {
+      "id": "T11",
+      "title": "Write the remote swap script and its integration test against a temp folder",
+      "layer": "infra",
+      "deps": [
+        "T8"
+      ],
+      "acs": [
+        "AC-10",
+        "AC-11"
+      ],
+      "dod": "`tests/swap.test.ts` passes on the runner and locally (macOS and Linux `sh`)",
+      "files_hint": [
+        "deploy/remote/swap.sh",
+        "tests/swap.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t11-remote-swap-script.md"
+    },
+    {
+      "id": "T12",
+      "title": "Build the publish report: public counts summary and the GPG-encrypted full report",
+      "layer": "infra",
+      "deps": [
+        "T8"
+      ],
+      "acs": [
+        "AC-07",
+        "AC-09"
+      ],
+      "dod": "`tests/report.test.ts` passes in CI, including the round-trip and the \"summary leaks no path\" case",
+      "files_hint": [
+        "deploy/report.ts",
+        "deploy/maintainers/",
+        "tests/report.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t12-publish-report.md"
+    },
+    {
+      "id": "T13",
+      "title": "Write the publish shell: list, plan, report, stage, swap, verify over SSH",
+      "layer": "app",
+      "deps": [
+        "T1",
+        "T10",
+        "T11",
+        "T12"
+      ],
+      "acs": [
+        "AC-01",
+        "AC-04",
+        "AC-10",
+        "AC-13"
+      ],
+      "dod": "`tests/publish.test.ts` passes end to end through the local executor",
+      "files_hint": [
+        "deploy/publish.ts",
+        "deploy/ssh.ts",
+        "tests/publish.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t13-publish-shell.md"
+    },
+    {
+      "id": "T14",
+      "title": "Wire the deploy job to the publish worker in the main-only environment and add CODEOWNERS",
+      "layer": "wiring",
+      "deps": [
+        "T13"
+      ],
+      "acs": [
+        "AC-08",
+        "AC-09"
+      ],
+      "dod": "the deploy job runs `node deploy/publish.ts` in environment `kth-server` with no `scp-action` left, PR runs never deploy, and CODEOWNERS covers `/deploy/` and `/.github/`",
+      "files_hint": [
+        ".github/workflows/publish.yaml",
+        ".github/CODEOWNERS"
+      ],
+      "file": "docs/features/clean-starter/tasks/t14-workflow-and-codeowners.md"
+    },
+    {
+      "id": "T15",
+      "title": "Document the publishing rules and rollout, and confirm the repository is free of starter files",
+      "layer": "docs",
+      "deps": [
+        "T14"
+      ],
+      "acs": [
+        "AC-08",
+        "AC-14"
+      ],
+      "dod": "`deploy/README.md` covers the four rollout steps and the deletion switch, and the sweep finds no starter file, template notice or licence file outside `docs/`",
+      "files_hint": [
+        "deploy/README.md",
+        "README.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t15-rollout-runbook-and-repo-sweep.md"
+    }
+  ]
+}
