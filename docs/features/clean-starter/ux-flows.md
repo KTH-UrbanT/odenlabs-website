@@ -63,9 +63,7 @@ shows the not-found page (AC-01).
 
 ```mermaid
 flowchart TD
-    A(["Visitor follows an old starter link, a removed page's link or a typo"]) --> B{"Does the server show the site's own not-found page?"}
-    B -->|yes| C["SCR-02 Not-found page: says the page does not exist, search engines told not found"]
-    B -.->|"no, open question in spec section 8"| X["Server's generic error page"]
+    A(["Visitor follows an old starter link, a removed page's link or a typo"]) --> C["SCR-02 Not-found page: says the page does not exist, search engines told not found"]
     C -->|"link to the front page or logo"| D["SCR-01 Front page"]
     C -->|navigation| E["SCR-03 Section page"]
 ```
@@ -74,8 +72,9 @@ A visitor follows an address the site does not have. That could be an old starte
 address of a page that was removed, or a typo. They land on the not-found page, in the group's
 look, which says the page does not exist and tells search engines the same. From there the
 front-page link or the logo takes them to the front page, and the navigation takes them to any
-published section. The dotted branch is the §8 open question: if the KTH server doesn't serve the
-site's own not-found page, the visitor sees the server's generic error page instead.
+published section. The maintainer has confirmed that the KTH server serves the site's own
+not-found page for every missing address within the site's subdomain (`oden.abe.kth.se`), so
+visitors there never see a generic server error page.
 
 ### Flow: US-03 — Navigate only to real sections
 
@@ -205,7 +204,7 @@ and the navigation takes them to any published section.
 | AC     | Shown by                                                                 | Notes                                                                    |
 | ------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
 | AC-01  | Flow US-01 → "after cleanup" branch; Flow US-06 → SCR-04 removed list    | First starter cleanup is the US-06 flow with the first-cleanup list      |
-| AC-02  | Flow US-02 → SCR-02                                                      | Server support for the site's own not-found page is a §8 open question   |
+| AC-02  | Flow US-02 → SCR-02                                                      | KTH server serves the site's own not-found page within its subdomain (confirmed)   |
 | AC-03  | Flow US-03 → "yes" branch, navigation offers planned sections with pages |                                                                          |
 | AC-04  | Flow US-03 → "no" branch, entry left out + warning in SCR-04             | Warning only, the publish goes ahead                                     |
 | AC-05  | Flow US-04 → SCR-01 / SCR-02 in the group look                           | Screenshot sign-off is one-time and manual, not drawn                    |

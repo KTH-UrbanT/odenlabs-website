@@ -226,7 +226,6 @@ Traceability: KTH requires its websites to follow its accessibility, GDPR and on
 ## 8. Open questions
 
 - [ ] May a self-built site on an abe.kth.se address carry its own palette and type under the KTH graphic profile? Default now: yes — the logo is kept and the site follows KTH accessibility and GDPR rules; ask grafiskprofil@kth.se and the ABE webmaster. — owner: pasichnyi, due: 2026-10-18
-- [ ] Does the KTH server show the site's own not-found page and signal not-found for missing addresses? Default now: assume yes; if not, ask KTH IT to enable it. — owner: pasichnyi, due: before sdd:design
 - [ ] Who besides the maintainer writes to the server folder (KTH IT, certificate renewal, verification files)? Default now: nobody — the first listing (AC-07) is the evidence. — owner: pasichnyi, due: before deletion is switched on
 - [ ] Who holds the rights to the repository's code and content once the licence file is gone (the maintainer, the group, KTH)? Default now: all rights reserved, held by the group. — owner: pasichnyi, due: 2026-10-31
 - [ ] Can the KTH server switch from the old version of the site to the new one in a single step, and must protected files stay untouched or may they be carried into the new version? Default now: files are copied one by one and protected files stay untouched; the ≤ 5 s mixed-version target stands until design shows it cannot be met. — owner: pasichnyi, due: before sdd:design
