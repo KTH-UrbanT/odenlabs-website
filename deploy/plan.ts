@@ -76,8 +76,10 @@ export function parseRuleList(text: string, fileName: string): string[] {
     const where = `${fileName}:${i + 1}`;
     const path = normalisePath(line);
     if (/[*?[\]]/.test(line)) problems.push(`${where}: glob not allowed`);
-    else if (path === null) problems.push(`${where}: malformed path`);
-    else if (paths.includes(path)) problems.push(`${where}: duplicate ${path}`);
+    else if (path === null || line !== line.trim()) {
+      problems.push(`${where}: malformed path`);
+    } else if (paths.includes(path))
+      problems.push(`${where}: duplicate ${path}`);
     else paths.push(path);
   });
   if (problems.length > 0) throw new Error(problems.join("\n"));
@@ -225,6 +227,7 @@ export type FailedCheck =
   | "removal-limit"
   | "protected-clash"
   | "layout-clash"
+  | "approved-in-build"
   | "listing-failed"
   | "upload-failed"
   | "swap-failed"
@@ -376,6 +379,13 @@ function firstFailedCheck(
       detail: `build file at a protected address: ${clashes.join(", ")}`,
     };
   }
+  const approvedInBuild = build.filter((p) => rules.approved.includes(p));
+  if (approvedInBuild.length > 0) {
+    return {
+      failedCheck: "approved-in-build",
+      detail: `approved for removal but also in the build: ${approvedInBuild.join(", ")}`,
+    };
+  }
   const layout = findLayoutClash(build, input.listing);
   if (layout !== null) {
     return {
@@ -418,9 +428,18 @@ function firstFailedCheck(
       approved.length === sorted.remove.length &&
       approved.every((p, i) => p === sorted.remove[i]);
     if (!exact) {
+      const plannedNotApproved = sorted.remove.filter(
+        (p) => !rules.approved.includes(p),
+      );
+      const approvedNotPlanned = rules.approved
+        .filter((p) => !sorted.remove.includes(p))
+        .sort();
       return {
         failedCheck: "removal-limit",
-        detail: `${sorted.remove.length} removals exceed the routine limit of ${limit} and differ from the approved list`,
+        detail:
+          `${sorted.remove.length} removals exceed the routine limit of ${limit} and differ from the approved list; ` +
+          `planned, not approved: ${plannedNotApproved.join(", ") || "none"}; ` +
+          `approved, not planned: ${approvedNotPlanned.join(", ") || "none"}`,
       };
     }
   }

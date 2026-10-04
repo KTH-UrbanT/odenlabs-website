@@ -76,6 +76,15 @@ describe("parseRuleList", () => {
       parseRuleList("post/*.html\n", "approved-removals.txt"),
     ).toThrow(/approved-removals\.txt:1.*glob/);
   });
+
+  it.each([[".htaccess \n"], [" .htaccess\n"], [".htaccess\t\n"]])(
+    "rejects a line with leading or trailing whitespace as malformed: %j",
+    (text) => {
+      expect(() => parseRuleList(text, "protected.txt")).toThrow(
+        /protected\.txt:1.*malformed/,
+      );
+    },
+  );
 });
 
 describe("parseSettings", () => {
@@ -461,6 +470,15 @@ describe("planPublish: stop-guards (AC-11b, AC-12)", () => {
     expectStop(result, "no-previous-record");
   });
 
+  it.each(["off", "on"] as const)(
+    "stops when an approved path is also a build path (deletion %s)",
+    (deletion) => {
+      const result = stop({ deletion, approved: ["icon.png"] });
+      expectStop(result, "approved-in-build");
+      if (!result.ok) expect(result.detail).toContain("icon.png");
+    },
+  );
+
   it("stops when the build lacks the front page", () => {
     expectStop(
       stop({ build: build.filter((p) => p !== "index.html") }),
@@ -549,6 +567,35 @@ describe("planPublish: stop-guards (AC-11b, AC-12)", () => {
       });
       expect(result.ok).toBe(true);
       if (result.ok) expect(result.remove).toEqual(starter);
+    });
+
+    it("lists planned-not-approved and approved-not-planned paths in the detail", () => {
+      const starter = starterFiles(22);
+      const result = stop({
+        deletion: "on",
+        listing: [...build, ...starter, RECORD_FILE],
+        record: publishRecord({ paths: [...build, starter[21]] }),
+        approved: starter.slice(0, 21),
+      });
+      expectStop(result, "removal-limit");
+      if (result.ok) return;
+      expect(result.detail).toMatch(/planned, not approved:.*demo-22/);
+      expect(result.detail).not.toMatch(/planned, not approved:.*demo-01/);
+    });
+
+    it("lists an approved path the plan would not remove (already gone)", () => {
+      const starter = starterFiles(22);
+      const extra = "post/other/index.html";
+      const result = stop({
+        deletion: "on",
+        listing: [...build, ...starter, extra, RECORD_FILE],
+        record: publishRecord({ paths: [...build, ...starter] }),
+        approved: [extra, "post/gone/index.html"],
+      });
+      expectStop(result, "removal-limit");
+      if (result.ok) return;
+      expect(result.detail).toMatch(/approved, not planned:.*gone/);
+      expect(result.detail).not.toMatch(/approved, not planned:.*other/);
     });
 
     it("stops when the approved list misses one planned removal", () => {

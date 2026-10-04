@@ -114,7 +114,7 @@ describe("swap.sh", () => {
 
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/swap-seconds=\d/);
+    expect(result.stdout).toMatch(/swap-seconds=\d+\.\d{3}\n$/);
     const after = snapshot();
     expect(after.get("index.html")?.bytes).toBe("new front page");
     expect(after.get("_astro/site.abc.css")?.bytes).toBe("body{}");
@@ -205,5 +205,19 @@ describe("swap.sh", () => {
     expect(result.status).toBe(5);
     expect(result.stderr).toMatch(/layout-clash/);
     expect(snapshot()).toEqual(before);
+  });
+
+  it("prints the swap time with a decimal point whatever the locale", () => {
+    const probe = spawnSync("awk", ['BEGIN { printf "%.1f", 1.5 }'], {
+      encoding: "utf8",
+      env: { ...process.env, LC_ALL: "sv_SE.UTF-8" },
+    });
+    if (probe.stdout !== "1,5") return; // no comma-decimal locale here
+    stage({ "index.html": "new" }, []);
+
+    const result = swap({ ...process.env, LC_ALL: "sv_SE.UTF-8" });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/swap-seconds=\d+\.\d{3}\n$/);
   });
 });

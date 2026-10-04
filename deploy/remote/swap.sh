@@ -97,4 +97,4 @@ mv -f -- "$stage/swap/record.json" .publish-record.json
 
 end=$(now)
 rm -rf -- "$stage"
-awk -v s="$start" -v e="$end" 'BEGIN { printf "swap-seconds=%.3f\n", e - s }'
+LC_ALL=C awk -v s="$start" -v e="$end" 'BEGIN { printf "swap-seconds=%.3f\n", e - s }'
