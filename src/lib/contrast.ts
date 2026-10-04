@@ -51,6 +51,7 @@ export function contrastRatio(a: string, b: string): number {
 export function resolveTokens(css: string): Map<string, string> {
   const raw = new Map<string, string>();
   for (const m of css.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
+    if (raw.has(m[1])) throw new Error(`Token defined twice: ${m[1]}`);
     raw.set(m[1], m[2].trim());
   }
   const resolved = new Map<string, string>();
@@ -86,11 +87,25 @@ export function checkPairs(
     }
     return value;
   };
+  const ratioOf = (pair: ContrastPair) => {
+    try {
+      return contrastRatio(
+        colour(pair, pair.text),
+        colour(pair, pair.background),
+      );
+    } catch (e) {
+      const m = /^Not a hex colour: (.*)$/.exec((e as Error).message);
+      if (!m) throw e;
+      const bad = [pair.text, pair.background].find(
+        (t) => tokens.get(t)?.trim() === m[1].trim(),
+      );
+      throw new Error(
+        `Pair "${pair.name}": token ${bad} is not a hex colour (${m[1]})`,
+      );
+    }
+  };
   return pairs.flatMap((pair) => {
-    const ratio = contrastRatio(
-      colour(pair, pair.text),
-      colour(pair, pair.background),
-    );
+    const ratio = ratioOf(pair);
     const minimum = minimumFor(pair.size);
     return ratio < minimum ? [{ name: pair.name, ratio, minimum }] : [];
   });

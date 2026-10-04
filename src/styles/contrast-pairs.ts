@@ -35,4 +35,10 @@ export const contrastPairs: readonly ContrastPair[] = [
     background: "--color-surface",
     size: "body",
   },
+  {
+    name: "heading on page",
+    text: "--color-brand",
+    background: "--color-bg",
+    size: "large",
+  },
 ];

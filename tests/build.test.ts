@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
+import { sections } from "../src/data/sections";
 
 const dist = "dist";
 
@@ -56,5 +57,30 @@ describe("header navigation", () => {
       }
     }
     expect(dead).toEqual([]);
+  });
+});
+
+describe("header navigation (AC-03)", () => {
+  // Decided from the files in src/pages directly, not through the helper the
+  // header uses, so the header cannot pass by finding no pages at all.
+  const hasPage = (href: string) => {
+    const slug = href.replace(/^\/|\/$/g, "");
+    return ["astro", "md", "html"].some(
+      (ext) =>
+        existsSync(`src/pages/${slug}.${ext}`) ||
+        existsSync(`src/pages/${slug}/index.${ext}`),
+    );
+  };
+
+  it("offers every planned section that has a page, in planned order with its label", () => {
+    const expected = sections.filter((s) => hasPage(s.href));
+    const header =
+      /<header[\s\S]*?<\/header>/.exec(html("index.html"))?.[0] ?? "";
+    const offered = [
+      ...header.matchAll(/<a\s[^>]*href="([^"]+)"[^>]*>([^<]*)<\/a>/g),
+    ]
+      .map(([, href, label]) => ({ label: label.trim(), href }))
+      .filter((l) => sections.some((s) => s.href === l.href));
+    expect(offered).toEqual(expected);
   });
 });
