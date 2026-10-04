@@ -16,6 +16,12 @@ function isOffSite(url: string, ownHost: string): boolean {
   }
 }
 
+// One attribute value, double-quoted, single-quoted or unquoted.
+const value = String.raw`\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))`;
+const attr = (name: string, flags = "i") =>
+  new RegExp(String.raw`(?:^|\s)${name}` + value, flags);
+const valueOf = (m: RegExpMatchArray) => m[1] ?? m[2] ?? m[3];
+
 /** Every off-site URL that `source` (HTML or CSS) makes the browser request. */
 export function findOffSiteRequests(source: string, ownHost: string): string[] {
   const found: string[] = [];
@@ -24,15 +30,20 @@ export function findOffSiteRequests(source: string, ownHost: string): string[] {
   };
 
   for (const [, attrs] of source.matchAll(/<link\s([^>]*)>/gi)) {
-    const rel = /\brel\s*=\s*["']([^"']*)["']/i.exec(attrs)?.[1] ?? "";
-    const href = /\bhref\s*=\s*["']([^"']*)["']/i.exec(attrs)?.[1];
-    if (href !== undefined && FETCHING_REL.test(rel)) add(href);
+    const rel = attrs.match(attr("rel"));
+    const href = attrs.match(attr("href"));
+    if (href && FETCHING_REL.test(rel ? valueOf(rel) : "")) add(valueOf(href));
   }
-  for (const [, url] of source.matchAll(/\ssrc\s*=\s*["']([^"']*)["']/gi)) {
-    add(url);
+  // `href` on SVG <image> and <use> loads a resource.
+  for (const [, attrs] of source.matchAll(/<(?:image|use)\s([^>]*)>/gi)) {
+    const href = attrs.match(attr("(?:xlink:)?href"));
+    if (href) add(valueOf(href));
   }
-  for (const [, set] of source.matchAll(/\ssrcset\s*=\s*["']([^"']*)["']/gi)) {
-    for (const candidate of set.split(","))
+  for (const name of ["src", "poster"]) {
+    for (const m of source.matchAll(attr(name, "gi"))) add(valueOf(m));
+  }
+  for (const m of source.matchAll(attr("srcset", "gi"))) {
+    for (const candidate of valueOf(m).split(","))
       add(candidate.trim().split(/\s+/)[0]);
   }
   for (const [, url] of source.matchAll(

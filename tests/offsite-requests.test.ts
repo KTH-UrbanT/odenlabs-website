@@ -27,6 +27,23 @@ describe("findOffSiteRequests", () => {
     );
   });
 
+  it("reports unquoted attributes, poster and SVG image/use href", () => {
+    const html = `
+      <img src=https://a.example.com/p.png alt=x>
+      <link rel=stylesheet href=https://b.example.com/s.css>
+      <video poster="https://c.example.com/v.jpg"></video>
+      <svg><image href="https://d.example.com/i.svg"/><use href="https://e.example.com/s.svg#i"/></svg>`;
+    expect(findOffSiteRequests(html, own).sort()).toEqual(
+      [
+        "https://a.example.com/p.png",
+        "https://b.example.com/s.css",
+        "https://c.example.com/v.jpg",
+        "https://d.example.com/i.svg",
+        "https://e.example.com/s.svg#i",
+      ].sort(),
+    );
+  });
+
   it("reports off-site @import and url() in CSS", () => {
     const css = `@import "https://a.example.com/a.css";
       @import url(https://b.example.com/b.css);
