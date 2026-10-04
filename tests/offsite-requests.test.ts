@@ -136,6 +136,110 @@ describe("findOffSiteRequests", () => {
     expect(findOffSiteRequests(html, own)).toEqual([]);
   });
 
+  it("reads a tag whose other attributes hold a raw '<', '</svg>' or a '/' separator", () => {
+    const html = `
+      <div class="card" title="Jane <PI>" style="background-image:url(&quot;https://cdn.example.com/jane.jpg&quot;)"></div>
+      <div title="1 < 2" style='background:url("https://x.example.com/a")'></div>
+      <svg aria-label="a</svg>b"><style>.a{fill:url(&quot;https://o.example.com/p#p&quot;)}</style></svg>
+      <svg aria-label="a<b"><style>.a{fill:url(&quot;https://s.example.com/p#p&quot;)}</style></svg>
+      <svg><path/mask="url(&quot;https://m.example.com/m#m&quot;)"/></svg>`;
+    expect(findOffSiteRequests(html, own).sort()).toEqual([
+      "https://cdn.example.com/jane.jpg",
+      "https://m.example.com/m#m",
+      "https://o.example.com/p#p",
+      "https://s.example.com/p#p",
+      "https://x.example.com/a",
+    ]);
+  });
+
+  it("decodes &quot;, &amp;, &lt; and &gt; without ';' as the browser does", () => {
+    const html = `
+      <div style="background:url(&quot https://a.example.com/x&quot)"></div>
+      <div style="background:url(&QUOT//lq.example.com/x&QUOT)"></div>
+      <svg><style>.a{fill:url(&quothttps://b.example.com/p#p&quot)}</style></svg>`;
+    expect(findOffSiteRequests(html, own).sort()).toEqual([
+      "//lq.example.com/x",
+      "https://a.example.com/x",
+      "https://b.example.com/p#p",
+    ]);
+  });
+
+  it("leaves a legacy reference followed by a letter, digit or '=' in an attribute", () => {
+    const html = `<div style="background:url(&quothttps://c.example.com/x&quot)"></div>`;
+    expect(findOffSiteRequests(html, own)).toEqual([]);
+  });
+
+  it("matches named references by exact case", () => {
+    const html = `
+      <div style="background:url(&quot;https&Colon;//d.example.com/x&quot;)"></div>
+      <div style="background:url(&quot;https:&SOL;&SOL;e.example.com/x&quot;)"></div>
+      <div style="background:url(&Quot https://q.example.com/x&Quot)"></div>`;
+    expect(findOffSiteRequests(html, own)).toEqual([]);
+  });
+
+  it("decodes a hex reference without ';' and the remaining named punctuation", () => {
+    const html = `
+      <div style="background:url(&#x22https://h2.example.com/x&#x22)"></div>
+      <div style="background:url&lpar;&quot;https://p1.example.com/x&quot;&rpar;"></div>
+      <div style="background:url(&quot;https://p2&period;example.com/x&quot;)"></div>
+      <div style="background:url(&Tab;&quot;https://t.example.com/x&quot;)"></div>
+      <div style="background:url(&quot;https://n.example.com/x&quot;&NewLine;)"></div>`;
+    expect(findOffSiteRequests(html, own).sort()).toEqual([
+      "https://h2.example.com/x",
+      "https://n.example.com/x",
+      "https://p1.example.com/x",
+      "https://p2.example.com/x",
+      "https://t.example.com/x",
+    ]);
+  });
+
+  it("reads upper-case tags and attributes", () => {
+    const html = `
+      <DIV STYLE=background:url(&quot;https://u1.example.com/x&quot;)></DIV>
+      <SVG><STYLE>.a{fill:url(&quot;https://u2.example.com/x&quot;)}</STYLE></SVG>`;
+    expect(findOffSiteRequests(html, own).sort()).toEqual([
+      "https://u1.example.com/x",
+      "https://u2.example.com/x",
+    ]);
+  });
+
+  it("does not decode a plain <style>, a <style> after </svg>, or attribute-like page text", () => {
+    const html = `
+      <style>.a{background:url(&quot;https://s1.example.com/x&quot;)}</style>
+      <svg></svg><style>.b{background:url(&quot;https://s2.example.com/x&quot;)}</style>
+      <p>Set style=url(&quot;https://s3.example.com/a&quot;) here</p>`;
+    expect(findOffSiteRequests(html, own)).toEqual([]);
+  });
+
+  it("skips script text when reading tags", () => {
+    const html = `
+      <script>if (a<b) s = 'x</script>
+      <div style="background:url(&quot;https://z1.example.com/x&quot;)"></div>`;
+    expect(findOffSiteRequests(html, own)).toEqual([
+      "https://z1.example.com/x",
+    ]);
+  });
+
+  it("skips comments when reading tags", () => {
+    const html = `
+      <!-- a<b c='x -->
+      <div style="background:url(&quot;https://z2.example.com/x&quot;)"></div>`;
+    expect(findOffSiteRequests(html, own)).toEqual([
+      "https://z2.example.com/x",
+    ]);
+  });
+
+  it("ends an unquoted value at whitespace", () => {
+    const html = `<div title=a style="x>y;background:url(&quot;https://w.example.com/x&quot;)"></div>`;
+    expect(findOffSiteRequests(html, own)).toEqual(["https://w.example.com/x"]);
+  });
+
+  it("scans malformed url() input in linear time", () => {
+    const started = performance.now();
+    expect(findOffSiteRequests("url(".repeat(200000), own)).toEqual([]);
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
   it("allows own-host, relative and data URLs, plain links and mailto", () => {
     const html = `
       <link rel="stylesheet" href="/a.css">
