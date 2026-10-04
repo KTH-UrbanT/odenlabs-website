@@ -65,23 +65,50 @@ and a minimal slice of step 2 (spec §1).
      Never N/A — every feature inherits at least Conventions + Technical. -->
 
 **Technical.**
-- <Language + version>
-- <Framework(s) + version>
-- <Datastore(s) + version>
-- <Architecture convention — e.g. the layering style from the project convention file>
+- TypeScript on Node ≥ 24 (`package.json` `engines`, version pinned in `.nvmrc`); npm with a
+  committed lockfile, `npm ci` in CI.
+- Astro 7 (`astro ^7.3.5`), `output: "static"`, with no UI-framework islands (repo ADR
+  [0001](../../adr/0001-build-the-site-with-astro-as-a-static-site.md)). Vitest 5, `@astrojs/check`
+  and Prettier 3 with `prettier-plugin-astro`.
+- No database. Content is typed files in git (repo ADR
+  [0002](../../adr/0002-keep-content-as-typed-files-in-git.md)). The only state outside git is the
+  shared server folder on the KTH web server.
+- CI/CD runs on GitHub Actions, `ubuntu-latest`. One workflow (`.github/workflows/publish.yaml`)
+  checks every PR and deploys `main`. Deploy authenticates over SSH with four existing secrets
+  (`SSH_HOST`, `SSH_USERNAME`, `SSH_PRIVATE_KEY`, `SSH_TARGET_DIR`).
+- The KTH web server only serves static files: no server-side code and no Node at request time.
+  It serves the site's own `404.html` for every missing address within `oden.abe.kth.se`
+  (confirmed during clarify). SSH shell access with `tar` is inferred from today's
+  `appleboy/scp-action`, which unpacks a tarball remotely. `find` and `mv` are assumed, not
+  verified (§11).
+- Styling uses plain CSS custom properties from `src/styles/tokens.css` only, with no raw colours
+  outside it (repo ADR [0003](../../adr/0003-style-with-plain-css-custom-properties.md)).
 
 **Organisational.**
-- <Effort budget — e.g. 3 person-weeks>
-- <Deadline — e.g. 2026-Q3 hard>
-- <Team composition>
+- One maintainer (pasichnyi). The architecture has to stay operable by one person.
+- No external deadline. The trigger is that the next merge to `main` publishes the skeleton
+  (spec §1).
+- No effort budget is quoted (sized M). Every new dependency needs a reason (`CLAUDE.md`).
 
 **Conventions.**
-- <Link to the project's convention file>
-- <Naming, ID strategy, error-handling pattern>
+- [`CLAUDE.md`](../../../CLAUDE.md) and [`docs/architecture-map.md`](../../architecture-map.md)
+  §Conventions.
+- "Bad content fails the build, never the visitor": errors surface at build or publish time,
+  never at request time.
+- IDs are file names. Cross-entity logic is a pure function in `src/lib/` with a Vitest test.
+- The design canon is [`docs/design-system.md`](../../design-system.md). Tokens in
+  `tokens.css` lead and Figma mirrors them.
 
 **Regulatory / external.**
-- <e.g. data-retention / deletion behaviour per ADR-NNNN>
-- <e.g. applicable compliance controls, or N/A with a reason>
+- KTH requires its websites to follow its accessibility, GDPR and online-publication guidelines
+  ("Create a website at KTH", intra.kth.se). Accessibility here means WCAG 2.1 AA contrast
+  (spec §6).
+- No visitor data is collected. Fonts and assets are self-served, so visitors' addresses are not
+  sent to third parties (spec §6.1).
+- Whether the site may carry its own palette and type under the KTH graphic profile is open
+  (spec §8, owner pasichnyi, due 2026-10-18). The design keeps that a token-file edit (§11).
+- Security review is required: this is the first time a publish deletes files on a shared
+  university server (spec §6.1).
 
 ## 3. Context and scope
 
