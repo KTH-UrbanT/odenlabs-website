@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkPairs,
   contrastRatio,
+  meetsMinimum,
   minimumFor,
   resolveTokens,
 } from "../src/lib/contrast";
@@ -130,6 +131,20 @@ describe("checkPairs at the thresholds", () => {
   it("passes a large pair above 3:1 and fails one just below", () => {
     expect(checkPairs([pair("--ok-large", "large")], tokens)).toEqual([]);
     expect(checkPairs([pair("--bad-large", "large")], tokens)).toHaveLength(1);
+  });
+});
+
+describe("meetsMinimum (exact thresholds)", () => {
+  // No hex colour lands exactly on 4.5 or 3.0, so the boundary is pinned here.
+  it.each([
+    [4.5, "body", true],
+    [4.4999, "body", false],
+    [3.0, "large", true],
+    [2.9999, "large", false],
+    [3.0, "ui", true],
+    [2.9999, "ui", false],
+  ] as const)("%f for %s text → %s", (ratio, size, ok) => {
+    expect(meetsMinimum(ratio, size)).toBe(ok);
   });
 });
 

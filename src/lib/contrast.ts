@@ -22,6 +22,11 @@ export function minimumFor(size: TextSize): number {
   return size === "body" ? 4.5 : 3;
 }
 
+/** True when a ratio reaches its size's minimum; exactly the minimum passes. */
+export function meetsMinimum(ratio: number, size: TextSize): boolean {
+  return ratio >= minimumFor(size);
+}
+
 function parseHex(value: string): [number, number, number] {
   const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value.trim());
   if (!m) throw new Error(`Not a hex colour: ${value}`);
@@ -106,7 +111,8 @@ export function checkPairs(
   };
   return pairs.flatMap((pair) => {
     const ratio = ratioOf(pair);
-    const minimum = minimumFor(pair.size);
-    return ratio < minimum ? [{ name: pair.name, ratio, minimum }] : [];
+    return meetsMinimum(ratio, pair.size)
+      ? []
+      : [{ name: pair.name, ratio, minimum: minimumFor(pair.size) }];
   });
 }
