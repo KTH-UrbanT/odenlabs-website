@@ -7,7 +7,7 @@
 |---|---|---|---|---|---|---|
 | T1 | Planned sections + offered-sections helpers | domain | pasichnyi | S | — | done |
 | T2 | WCAG contrast check over declared pairs | domain | pasichnyi | S | — | done |
-| T3 | Header renders only offered sections | ui | pasichnyi | S | T1 | todo |
+| T3 | Header renders only offered sections | ui | pasichnyi | S | T1 | done |
 | T4 | Not-found page | ui | pasichnyi | S | — | todo |
 | T5 | Minimal front page | ui | pasichnyi | S | — (maintainer copy) | todo |
 | T6 | Identity: palette, type, fonts, sign-off | ui | pasichnyi | M | T2, T4, T5 | todo |

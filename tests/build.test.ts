@@ -1,12 +1,45 @@
-// Skeleton smoke test: the site builds and produces a front page.
+// Build tests: the site builds, and the built output keeps its promises
+// (front page, navigation that leads somewhere).
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join, relative } from "node:path";
+import { beforeAll, describe, expect, it } from "vitest";
+
+const dist = "dist";
+
+function builtFiles(dir = dist): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    return entry.isDirectory() ? builtFiles(path) : [relative(dist, path)];
+  });
+}
+
+const html = (file: string) => readFileSync(join(dist, file), "utf8");
+
+beforeAll(() => {
+  execFileSync("npx", ["astro", "build"], { stdio: "pipe" });
+});
 
 describe("astro build", () => {
   it("produces dist/index.html", () => {
-    execFileSync("npx", ["astro", "build"], { stdio: "pipe" });
     expect(existsSync("dist/index.html")).toBe(true);
-    expect(readFileSync("dist/index.html", "utf8")).toContain("<main");
+    expect(html("index.html")).toContain("<main");
+  });
+});
+
+describe("header navigation", () => {
+  it("links only to pages the build contains", () => {
+    const files = new Set(builtFiles());
+    const dead: string[] = [];
+    for (const page of [...files].filter((f) => f.endsWith(".html"))) {
+      const header = /<header[\s\S]*?<\/header>/.exec(html(page))?.[0] ?? "";
+      for (const [, href] of header.matchAll(/<a\s[^>]*href="([^"]+)"/g)) {
+        const target = href.endsWith("/")
+          ? `${href.slice(1)}index.html`
+          : href.slice(1);
+        if (!files.has(target)) dead.push(`${page} → ${href}`);
+      }
+    }
+    expect(dead).toEqual([]);
   });
 });

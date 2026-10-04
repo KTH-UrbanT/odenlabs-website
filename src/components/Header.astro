@@ -1,9 +1,17 @@
 ---
-const nav = [
-  { href: "/research/", label: "Research" },
-  { href: "/people/", label: "People" },
-  { href: "/join/", label: "Join/Contact" },
-];
+import { sections } from "../data/sections";
+import { offeredSections } from "../lib/navigation";
+
+// The pages this build contains, as built file paths: pages/research.astro
+// and pages/research/index.astro both build to research/index.html.
+const pages = Object.keys(import.meta.glob("../pages/**/*.{astro,md}"));
+const builtPages = new Set(
+  pages
+    .map((p) => p.replace(/^\.\.\/pages\//, "").replace(/\.(astro|md)$/, ""))
+    .filter((p) => !p.includes("["))
+    .map((p) => (p.endsWith("index") ? `${p}.html` : `${p}/index.html`)),
+);
+const nav = offeredSections(sections, builtPages);
 ---
 
 <header>
