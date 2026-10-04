@@ -489,22 +489,62 @@ constraints (§2), not part of this table.
      round ≤250ms to ≤300ms — that's a critic F6 hit).
      📌 e.g. «p95 ≤ 500 ms on a block update, verified by a 100 req/s load test». -->
 
-Each top-3 goal from §1 expanded into a full scenario:
+Each §1 quality goal expanded into a full scenario (numbers quoted verbatim from spec §6):
 
-**QG-1. <quality attribute>**
-- **When:** <trigger condition>
-- **Then:** <expected behaviour with numbers from spec §6 NFR>
-- **How verify:** <test / chaos drill / load test / metric>
+**QG-1. Safety of the shared server folder**
+- **When:** a publish runs with deletion on and the folder holds protected files and unknown files
+  (e.g. KTH IT's), or the target folder lacks the previous record, or the build lacks the front
+  page or logo, or the plan removes more files than the routine limit.
+- **Then:** protected files are unchanged (AC-11); a build file at a protected address stops the
+  publish before any change (AC-11b); unknown files stay and are reported (AC-13); and the
+  publish stops before deleting when any AC-12 check fails. Routine removal limit: "≤ 20 files
+  removed per publish without a maintainer-approved list" (spec §6), and an approval of a list
+  that differs by even one file does not count.
+- **How verify:** `tests/plan.test.ts` has one case per guard and per branch: empty folder, wrong
+  folder, missing record, record without front page or logo, 20 versus 21 removals, an approved
+  list off by one file, a protected clash, unknown files including odd names.
+  `tests/swap.test.ts` runs `swap.sh` against a temp folder seeded with protected and unknown
+  files, then asserts their bytes and timestamps are unchanged. Live: rollout step 2 (probe with
+  deletion off) runs before any deletion.
 
-**QG-2. <quality attribute>**
-- **When:** <trigger>
-- **Then:** <expected>
-- **How verify:** <how>
+**QG-2. An accurate mirror**
+- **When:** the first starter cleanup or a later page removal has been published (AC-01, AC-10),
+  or a visitor opens any page.
+- **Then:** "100% of the reviewed starter addresses show the not-found page and signal not-found"
+  (spec §6). Removed pages show the not-found page (AC-10). The navigation offers exactly the
+  planned sections whose page is published, in planned order (AC-03), and the dead-navigation-link
+  KPI target is 0 (spec §7).
+- **How verify:** the post-publish check requests every reviewed starter address and every removed
+  address, expects a not-found status, and fails the run otherwise. `tests/navigation.test.ts`
+  covers `offeredSections()` for all-present, none-present and a mistyped href.
+  `tests/build.test.ts` asserts that `dist/404.html` exists with `noindex`, and that every header
+  link resolves to a file in `dist/`.
 
-**QG-3. <quality attribute>**
-- **When:** <trigger>
-- **Then:** <expected>
-- **How verify:** <how>
+**QG-3. Readable and self-contained pages**
+- **When:** a maintainer changes a palette colour or the fonts and opens a pull request or merges.
+- **Then:** every declared text/background pairing meets "≥ 4.5:1 contrast for body text; ≥ 3:1
+  for large text and UI elements (WCAG 2.1 AA)", otherwise publishing is blocked and the failing
+  pair is named (AC-06). Third-party requests: "0 per page — fonts, styles and scripts all served
+  from the site itself". Font payload: "≤ 100 KB of font files per page" (spec §6).
+- **How verify:** `tests/contrast.test.ts` resolves every pair in `contrast-pairs.ts` against
+  `tokens.css` and fails with the pair's name (an "automated check, in the test suite, of every
+  text/background pairing the site uses, as declared alongside the palette"). `tests/build.test.ts`
+  scans every built HTML and CSS file for off-site `src`, `href` and `url()` references (a
+  "build-time scan of built pages for off-site asset references") and sums the font files each page
+  references (a "build output size check").
+
+**QG-4. A fast, consistent publish**
+- **When:** a reviewed change is merged to `main`, including when the publish is interrupted.
+- **Then:** merge-to-live is "≤ 10 min". The mixed-version window is "≤ 5 s in which a visitor can
+  receive a mix of old and new files; an interrupted publish leaves the previous version fully
+  served" (spec §6). This holds for any interruption before the rename step. The narrower case is
+  §11 accepted debt.
+- **How verify:** merge-to-live is measured as "CI run duration from merge to publish complete" from
+  the deploy run's timestamps. The swap window is logged by `swap.sh` (first rename to record
+  written) together with the post-publish check of the front page and logo, matching spec §6's
+  "publish log timestamps + post-publish check of front page and logo". `tests/swap.test.ts` kills
+  the swap before the rename step and asserts that the temp folder still holds the previous
+  version byte for byte.
 
 ## 11. Risks and technical debt
 
