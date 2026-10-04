@@ -66,9 +66,14 @@ function reachableFrom(entry: string): string[] {
     if (seen.has(file)) continue;
     seen.add(file);
     const source = readFileSync(file, "utf8");
-    for (const m of source.matchAll(/from\s+"(\.[^"]+)"/g)) {
-      const target = join(dirname(file), m[1]);
-      if (existsSync(target)) queue.push(target);
+    for (const m of source.matchAll(
+      /^import\s+(type\s+)?[^;]*?from\s+"(\.[^"]+)"/gms,
+    )) {
+      const base = join(dirname(file), m[2]);
+      const target = [base, `${base}.ts`].find((p) => existsSync(p));
+      if (target) queue.push(target);
+      // A runtime import the walk can't follow would hide code from the check.
+      else if (!m[1]) throw new Error(`${file}: cannot resolve import ${m[2]}`);
     }
   }
   return [...seen];
