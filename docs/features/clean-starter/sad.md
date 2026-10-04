@@ -391,18 +391,52 @@ sequenceDiagram
      🎯 N/A allowed for XS/S that reuses an existing deployment unit with no change.
      Deployment-diagram scaffold → templates/deployment.md. -->
 
-<Topology in 2–3 sentences. Where it runs, replicas, scaling thresholds.>
+Nothing runs at request time. The KTH web server serves static files from one shared folder.
+All logic runs on GitHub-hosted `ubuntu-latest` runners in `.github/workflows/publish.yaml`. A
+**check** job (every pull request and every push to `main`) runs lint, tests (including the
+readability, third-party and font-budget checks) and the build. A **deploy** job (push to `main`
+only, `needs: check`, environment `kth-server`, the existing `deploy-kth` concurrency group with
+no cancellation, so two publishes never overlap) runs `node deploy/publish.ts`. It replaces
+`appleboy/scp-action`. There is one instance of everything, no replicas and no scaling knobs.
+
+**Server-folder layout after this feature** (`SSH_TARGET_DIR`):
+
+```
+<SSH_TARGET_DIR>/
+├── index.html, 404.html, _astro/…, logo.svg, icon.png, fonts/…   # owned — listed in the record
+├── .publish-record.json        # owned — written last by every publish (ADR-0002)
+├── .publish-staging/           # transient — wiped at the start of each publish (ADR-0003)
+├── <protected files>           # named in deploy/rules/protected.txt — never changed
+└── <unknown files>             # e.g. KTH IT's — left in place, reported every publish
+```
+
+**Rollout order** (deletion stays off until the last step):
+1. Repository settings: protect `main`, add `CODEOWNERS`, move the SSH secrets into the
+   `kth-server` environment restricted to `main`, and add the maintainer's public key (ADR-0005,
+   ADR-0004).
+2. Probe publish with deletion off. It confirms `find`/`tar`/`mv` exist on the server, writes the
+   first record and delivers the first listing (AC-07).
+3. The maintainer marks protected files and approves the starter files in one reviewed change.
+4. A reviewed change sets `deletion: "on"`. The next publish is the first starter cleanup (AC-01).
+   It needs the exact approved list, since it exceeds the 20-file routine limit.
 
 **Monitoring:**
-- <Metrics — e.g. `<metric_name>`>
-- <Alerts — e.g. «worker lag > 10 min → page on-call»>
-- <Tracing — e.g. spans on the request boundary>
+- *Run duration* (merge to publish complete) is read from the deploy run's timestamps. It is the
+  merge-to-live KPI, with a target of ≤ 10 min.
+- *Swap duration* is logged by `swap.sh` from the first rename to the record write. It is the
+  mixed-version window, with a target of ≤ 5 s.
+- *Post-publish check* fetches the front page and logo (must load), plus every removed address and
+  the reviewed starter addresses (must be not-found). A failure fails the run.
+- *Alerts:* a failed run triggers GitHub's own failure notification to whoever merged. There is no
+  other alerting channel (ADR-0004).
+- *Job summary* shows counts only: uploaded, removed, unknown, warnings and the failed check.
 
 **Scaling thresholds:**
-- <e.g. comfortable in one table up to N rows/year>
-- <e.g. partition by quarter above N rows/year>
-
-<!-- For XS/S with no deployment change: <!-- N/A: reuses existing deployment unit, no infra change --> -->
+- Comfortable while the build stays under roughly 2,000 files or 200 MB, since the rename step is
+  linear in file count. Re-measure the swap duration once the publications list (roadmap step 7)
+  lands.
+- Staging briefly doubles the site's disk use on the server. The quota of the shared folder is
+  unknown (§11).
 
 ## 8. Crosscutting concepts
 
