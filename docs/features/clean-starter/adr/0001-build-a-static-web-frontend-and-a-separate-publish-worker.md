@@ -60,8 +60,10 @@ without a layer of its own, and without the unit tests the safety goal needs.
   changed independently.
 
 **Negative**
-- More artifacts. `api` produces an events contract for the worker (trigger: merge to `main`;
-  output: report), and `sequences` draws service flows alongside UI flows.
+- More artifacts. `sequences` draws service flows alongside UI flows. (The events contract for
+  the worker first planned here was not produced: nothing consumes the worker's events, and the
+  trigger and report are specified in sad.md §6 Flows 1 and 5 and data-model.md. Review
+  2026-10-04.)
 - There is no supported local dry run against the real server. The maintainer sees the plan
   only through a CI run.
 

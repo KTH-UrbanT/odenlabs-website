@@ -9,7 +9,7 @@ files_hint: ["src/pages/index.astro", "tests/build.test.ts"]
 owner: "pasichnyi"
 estimate: "S"
 context_budget: "S"
-status: "todo"
+status: "blocked"
 ---
 
 <!-- To the executing agent: work from what is inlined here. If a slice is insufficient,

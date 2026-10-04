@@ -9,7 +9,7 @@ files_hint: ["src/components/Header.astro", "tests/build.test.ts"]
 owner: "pasichnyi"
 estimate: "S"
 context_budget: "S"
-status: "todo"
+status: "done"
 ---
 
 <!-- To the executing agent: work from what is inlined here. If a slice is insufficient,

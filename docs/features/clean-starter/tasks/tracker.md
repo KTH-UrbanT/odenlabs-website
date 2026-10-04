@@ -20,17 +20,19 @@
 | T13 | Publish shell over SSH                                                                        | app    | pasichnyi | 1d       | T1, T10, T11, T12   | done    |
 | T14 | Workflow + CODEOWNERS                                                                         | wiring | pasichnyi | S        | T13                 | done    |
 | T15 | Runbook + repository sweep                                                                    | docs   | pasichnyi | S        | T14                 | done    |
-| T16 | Planner + swap: folder-layout clash guards (review F-01)                                      | domain | pasichnyi | M        | T10, T11            | todo    |
-| T17 | Build guard: zero off-site requests (split from T7, review F-02)                              | tests  | pasichnyi | S        | T4                  | todo    |
-| T18 | Worker failure paths, record and listing reporting (review F-03)                              | app    | pasichnyi | M        | T16                 | todo    |
-| T19 | Secrets boundary: CODEOWNERS + token scope (review F-04)                                      | wiring | pasichnyi | S        | T14                 | todo    |
-| T20 | Site checks: page rule helper, heading pair, threshold tests (review F-05)                    | ui     | pasichnyi | M        | T2, T3              | todo    |
-| T21 | Worker hardening: rules whitespace, timer locale, approved-in-build, limit diff (review F-06) | domain | pasichnyi | S        | T18                 | todo    |
-| T22 | Carry leftover owned files in the record (review F-07)                                        | app    | pasichnyi | S        | T21                 | todo    |
-| T23 | Docs sync after review (review F-06)                                                          | docs   | pasichnyi | S        | T16–T22             | todo    |
+| T16 | Planner + swap: folder-layout clash guards (review F-01)                                      | domain | pasichnyi | M        | T10, T11            | done    |
+| T17 | Build guard: zero off-site requests (split from T7, review F-02)                              | tests  | pasichnyi | S        | T4                  | done    |
+| T18 | Worker failure paths, record and listing reporting (review F-03)                              | app    | pasichnyi | M        | T16                 | done    |
+| T19 | Secrets boundary: CODEOWNERS + token scope (review F-04)                                      | wiring | pasichnyi | S        | T14                 | done    |
+| T20 | Site checks: page rule helper, heading pair, threshold tests (review F-05)                    | ui     | pasichnyi | M        | T2, T3              | done    |
+| T21 | Worker hardening: rules whitespace, timer locale, approved-in-build, limit diff (review F-06) | domain | pasichnyi | S        | T18                 | done    |
+| T22 | Carry leftover owned files in the record (review F-07)                                        | app    | pasichnyi | S        | T21                 | done    |
+| T23 | Docs sync after review (review F-06)                                                          | docs   | pasichnyi | S        | T16–T22             | done    |
 
 **Total:** 23 tasks, ~11 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 
 **Blocked (2026-10-04):** T5 waits for the front-page copy (who-we-are paragraph and
 contact route, spec §8). T6 waits for T5 and for the maintainer's font choice and
 before/after sign-off. T7 waits for T6.
+
+**Review follow-ups (2026-10-04):** T16–T23 done; deferrals and new due dates in spec §8.

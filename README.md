@@ -41,8 +41,10 @@ and the rollout steps: [`deploy/README.md`](deploy/README.md).
 GitHub Actions (`.github/workflows/publish.yaml`):
 
 - **Pull requests:** install, lint, test and build. Merge only when it is green.
-- **Push to `main`:** the same checks, then the built `dist/` is copied over SSH to the
-  KTH server, using the repository secrets `SSH_HOST`, `SSH_USERNAME`,
-  `SSH_PRIVATE_KEY` and `SSH_TARGET_DIR`.
+- **Push to `main`:** the same checks, then the publish job runs the guarded worker
+  (`node deploy/publish.ts`). It plans the publish, stops before any change when
+  something looks wrong, and only then swaps the build into place over SSH. The server
+  secrets live in the `kth-server` environment, which only `main` can use. Details:
+  [`deploy/README.md`](deploy/README.md).
 
 So publishing an update is: edit a file, open a pull request, merge.

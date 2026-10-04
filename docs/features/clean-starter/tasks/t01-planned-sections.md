@@ -9,7 +9,7 @@ files_hint: ["src/data/sections.ts", "src/lib/navigation.ts", "tests/navigation.
 owner: "pasichnyi"
 estimate: "S"
 context_budget: "M"
-status: "todo"
+status: "done"
 ---
 
 <!-- To the executing agent: work from what is inlined here. If a slice is insufficient,

@@ -9,7 +9,7 @@ files_hint: ["src/lib/contrast.ts", "src/styles/contrast-pairs.ts", "tests/contr
 owner: "pasichnyi"
 estimate: "S"
 context_budget: "S"
-status: "todo"
+status: "done"
 ---
 
 <!-- To the executing agent: work from what is inlined here. If a slice is insufficient,

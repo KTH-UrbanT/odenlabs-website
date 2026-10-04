@@ -35,7 +35,7 @@ updated_at: "2026-10-04"
 | SCR-01 | Front page         | Who the group is, where it sits at KTH, how to get in touch (AC-15), in the group's identity (AC-05)                                                                                                   | direct address, search result, logo on any page, link on SCR-02                              | a section via navigation (SCR-03), the contact route (off-site)                                |
 | SCR-02 | Not-found page     | Says the page does not exist, in the group's look, and leads back (AC-02)                                                                                                                              | any address the site does not have: old starter link, removed page, typo                     | front page (SCR-01), a section via navigation (SCR-03)                                         |
 | SCR-03 | Section page       | A published planned section (Research, People or Join/Contact once each exists); its content is roadmap steps 3–6, this feature only routes to it                                                      | navigation on any page                                                                       | another section, front page via logo                                                           |
-| SCR-04 | Publish report     | Maintainer-only outcome of one publish: uploaded / removed files, the check that stopped it, warnings (missing navigation page, failing colour pairing), unknown files awaiting a decision | every publish                                                                                | nothing to do, or a fix and a new publish, or a keep-or-remove decision (SCR-05)               |
+| SCR-04 | Publish report     | Maintainer-only outcome of one publish: uploaded / removed files, the check that stopped it, warnings (missing navigation page), unknown files awaiting a decision | every publish                                                                                | nothing to do, or a fix and a new publish, or a keep-or-remove decision (SCR-05)               |
 | SCR-05 | Server listing     | Maintainer-only list of every server-folder file the build does not contain, to mark protected or approve for removal (AC-07)                                                                          | a publish with deletion off; unknown files reported by any publish (AC-13)                   | marks proposed as a change (SCR-06)                                                            |
 | SCR-06 | Change review      | A proposed change to the protected list, removal approvals or deletion switch, waiting for a maintainer to accept it (AC-08)                                                                           | a maintainer or non-maintainer proposes the change                                           | accepted by a maintainer and published, or left waiting / declined                             |
 
@@ -104,7 +104,7 @@ of them.
 flowchart TD
     M(["Maintainer changes a colour in the palette"]) --> N(["Maintainer publishes"])
     N --> O{"Every declared text and background pairing readable?"}
-    O -->|no| P["Publish blocked: SCR-04 Publish report names the failing pairing (AC-06)"]
+    O -->|no| P["Publish blocked: the check job's log names the failing pairing (AC-06)"]
     P -->|"maintainer adjusts the colour"| M
     O -->|yes| Q["Site published in the new look"]
     Q --> V(["Visitor opens a page"])
@@ -113,7 +113,8 @@ flowchart TD
 
 When the maintainer changes a palette colour and publishes, the readability check runs over every
 text and background pairing the site declares it uses. If any pairing falls below the minimum, the
-publish is blocked and the report names the failing pairing (AC-06). The maintainer adjusts the
+publish is blocked and the check job's log names the failing pairing (AC-06). No publish runs, so
+the publish report (SCR-04) is not involved (ADR-0004). The maintainer adjusts the
 colour and tries again. Once every pairing passes, the site is published. A visitor opening the
 front page or the not-found page sees the unchanged logo with the group's palette and type (AC-05).
 The before/after screenshot sign-off is a one-time manual acceptance and appears in no flow.
@@ -208,7 +209,7 @@ and the navigation takes them to any published section.
 | AC-03  | Flow US-03 → "yes" branch, navigation offers planned sections with pages |                                                                          |
 | AC-04  | Flow US-03 → "no" branch, entry left out + warning in SCR-04             | Warning only, the publish goes ahead                                     |
 | AC-05  | Flow US-04 → SCR-01 / SCR-02 in the group look                           | Screenshot sign-off is one-time and manual, not drawn                    |
-| AC-06  | Flow US-04 → "no" branch, publish blocked, SCR-04 names the pairing      |                                                                          |
+| AC-06  | Flow US-04 → "no" branch, publish blocked, check log names the pairing   |                                                                          |
 | AC-07  | Flow US-05 → SCR-05 Server listing                                       |                                                                          |
 | AC-07b | Flow US-05 → entry "after switching it off"                              |                                                                          |
 | AC-08  | Flow US-05 → SCR-06, "not accepted" branch                               |                                                                          |

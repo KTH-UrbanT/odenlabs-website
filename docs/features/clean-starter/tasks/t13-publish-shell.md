@@ -9,7 +9,7 @@ files_hint: ["deploy/publish.ts", "deploy/ssh.ts", "tests/publish.test.ts"]
 owner: "pasichnyi"
 estimate: "1d"   # the largest task; still one session
 context_budget: "M"
-status: "todo"
+status: "done"
 ---
 
 <!-- To the executing agent: work from what is inlined here. If a slice is insufficient,

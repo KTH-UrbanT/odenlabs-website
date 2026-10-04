@@ -9,7 +9,7 @@ files_hint: ["deploy/report.ts", "deploy/maintainers/", "tests/report.test.ts"]
 owner: "pasichnyi"
 estimate: "M"
 context_budget: "M"
-status: "todo"
+status: "done"
 ---
 
 <!-- To the executing agent: work from what is inlined here. If a slice is insufficient,

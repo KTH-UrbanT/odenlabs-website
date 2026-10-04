@@ -385,6 +385,274 @@ sequenceDiagram
     end
 ```
 
+### Flow 3: navigation built from the planned sections (AC-03, AC-04)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as service (site build)
+    participant PS as data-store (planned sections list)
+    participant PJ as service (publish job)
+    actor M as user (maintainer)
+    participant SF as external-system (KTH web server)
+    actor V as user (visitor)
+    participant UI as ui (site page)
+
+    Note over B,PS: Precondition: the planned sections list holds the ordered labels and addresses (Research, People, Join/Contact)
+    B->>PS: Reads the ordered planned sections
+    PS-->>B: Labels and addresses in planned order
+    B->>B: Collects the pages the build contains
+    B->>B: Offers each planned section whose page exists, in planned order with its planned label
+    alt A planned entry points to a page the build lacks, not written yet or mistyped
+        B->>B: Leaves that entry out of every page's navigation and still finishes the build
+        B->>PJ: Hands over the built pages
+        PJ->>PJ: Compares the planned entries with the built pages
+        PJ-->>M: Publish summary warns which navigation entry points to a missing page
+        PJ->>SF: Publishes as in Flow 1 or Flow 5, the warning does not stop it
+    else Every planned section has a page
+        B->>PJ: Hands over the built pages
+        PJ->>SF: Publishes as in Flow 1 or Flow 5
+    end
+    V->>UI: Opens any page
+    UI->>SF: Requests the page
+    SF-->>UI: Page whose navigation lists only offered sections
+    alt Visitor picks an offered section
+        UI-->>V: The section page
+    else Visitor picks the logo
+        UI-->>V: The front page
+    end
+    Note over B,UI: Postcondition: every navigation link leads to a published page, with no separate navigation edit
+```
+
+### Flow 4: a palette change blocked by the readability check (AC-06)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor M as user (maintainer)
+    participant GH as external-system (GitHub review and Actions)
+    participant CJ as service (check job)
+    participant T as data-store (palette tokens and declared pairs)
+    participant PJ as service (publish job)
+
+    Note over M,GH: Precondition: the maintainer has changed a palette colour on a branch
+    M->>GH: Proposes the palette change for review
+    GH->>CJ: Runs the checks without server access
+    CJ->>T: Reads the palette and every declared text and background pair with its size class
+    T-->>CJ: Colours and pairs
+    CJ->>CJ: Computes each pair's contrast against its minimum, 4.5 to 1 for body text and 3 to 1 for large text and UI
+    alt A pair falls below its minimum
+        CJ-->>GH: Fails the check, naming the failing pair and its ratio
+        GH-->>M: Change blocked from merging, failing pair named
+        Note over GH,PJ: the publish job never starts and the live site keeps its previous look
+    else Every pair passes
+        CJ-->>GH: Check passes
+        M->>GH: Merges the change to main
+        GH->>CJ: Runs the same checks on main
+        CJ-->>GH: Check passes
+        GH->>PJ: Starts the publish as in Flow 1 or Flow 5
+    end
+    Note over M,PJ: Postcondition: no published page uses a text and background pair below the readability minimum
+```
+
+### Flow 5: a publish with deletion off (AC-07, AC-07b, AC-13)
+
+The publish is started by an event (a merge or a manual run), so it carries the async shape.
+Idempotency comes from planning against the publish record, not against history. There is no
+automatic retry, and the failed run with its encrypted report is the dead letter.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor M as user (maintainer)
+    participant GH as external-system (GitHub review and Actions)
+    participant PJ as service (publish job)
+    participant R as data-store (publishing rules)
+    participant SF as data-store (shared server folder)
+    participant RP as data-store (encrypted publish report)
+
+    Note over M,GH: Precondition: the deletion switch is off, never switched on or switched off by an accepted change (AC-07b)
+    M->>GH: Merges a reviewed change to main
+    GH->>PJ: Starts the publish from a push or a manual run, one publish at a time
+    PJ->>R: Reads the deletion switch, protected list and approved removals
+    R-->>PJ: Deletion is off
+    PJ->>SF: Lists the folder and reads the previous publish record
+    SF-->>PJ: Listing and record, or no record on the first publish
+    PJ->>PJ: Checks idempotency by planning from the record, so a re-run of the same commit adds no new change
+    PJ->>PJ: Plans upload only with zero removals
+    PJ->>PJ: Sorts every folder file the build lacks into protected, approved or unknown
+    alt A build file sits at a protected file's address
+        PJ->>RP: Writes the failed check and the listing, encrypted
+        PJ-->>GH: Fails the run, server untouched
+        GH-->>M: Notifies the failed run
+    else Plan accepted
+        PJ->>RP: Encrypts the listing to every maintainer key before any upload
+        alt No maintainer key or encryption fails
+            PJ-->>GH: Fails the run naming only the failed check, server untouched
+            GH-->>M: Notifies the failed run
+        else Listing encrypted
+            PJ->>SF: Uploads the build archive into the staging folder
+            PJ->>SF: Runs the swap script with an empty removal list
+            SF->>SF: Renames assets then pages into place and writes the new record
+            Note over PJ,SF: persists publish record (every uploaded path with its hash)
+            PJ->>SF: Checks the front page and logo over HTTPS
+            PJ->>RP: Completes the report with the listing, unknown files awaiting a decision and the check result
+            Note over PJ,RP: persists publish report (listing, unknown files, warnings), encrypted
+            PJ-->>GH: Public summary with counts only
+            GH-->>M: Run finished, encrypted report ready to download
+        end
+    end
+    Note over PJ,GH: retry 0 times automatically, the maintainer re-runs a failed publish once by hand
+    Note over M,RP: dead letter: the failed run, its encrypted report and the failure notice to the maintainer
+    Note over M,SF: Postcondition: the build is live, nothing was deleted and the maintainer holds the listing to mark files protected or approved
+```
+
+### Flow 6: a non-maintainer proposes a change to the publishing rules (AC-08)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor C as user (non-maintainer contributor)
+    participant GH as external-system (GitHub review and Actions)
+    participant CJ as service (check job)
+    actor M as user (maintainer)
+    participant PJ as service (publish job)
+    participant SF as data-store (shared server folder)
+
+    Note over C,GH: Precondition: maintainers own the rules files and the server key is usable only from main
+    C->>GH: Proposes a change to the protected list, approved removals or deletion switch
+    GH->>CJ: Runs the checks on the proposal
+    CJ->>CJ: Plans against fixtures with no server access
+    alt The proposal's own run tries to reach the server
+        CJ->>GH: Asks for the server secrets
+        GH-->>CJ: Refuses them outside main
+        CJ-->>GH: Fails without touching the server
+    else Checks finish
+        CJ-->>GH: Check result
+    end
+    GH->>M: Requests a maintainer review because the rules files are maintainer-owned
+    alt Maintainer declines or has not reviewed yet
+        GH-->>C: Proposal stays unmerged
+        Note over PJ,SF: no publish starts, so the live site and the rules in force are unchanged
+    else Maintainer accepts
+        M->>GH: Approves and merges the change to main
+        GH->>PJ: Starts the publish with the new rules as in Flow 1 or Flow 5
+        PJ->>SF: Applies the plan under the accepted rules
+    end
+    Note over C,SF: Postcondition: a rules change reaches the live site only after a maintainer accepts it
+```
+
+### Flow 7: who can read the publish report (AC-09)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant PJ as service (publish job)
+    participant RP as data-store (encrypted publish report)
+    participant GH as external-system (GitHub public log and run artifacts)
+    actor M as user (maintainer)
+    actor O as user (visitor or other non-maintainer)
+
+    Note over PJ,GH: Precondition: a publish produced a listing and the maintainers' public keys are in the repository
+    PJ->>PJ: Builds the full report with listing, unknown files, removed files and any failed check
+    PJ->>RP: Encrypts the report to every maintainer's public key
+    Note over PJ,RP: persists publish report as an encrypted run artifact
+    PJ->>GH: Writes the public log and summary with counts and check names only
+    alt Maintainer reads the report
+        M->>GH: Downloads the report artifact
+        GH-->>M: Encrypted file
+        M->>M: Decrypts it with their private key and reads the listing
+    else Non-maintainer reads the public log or summary
+        O->>GH: Opens the run log and job summary
+        GH-->>O: Counts and check names only, no server file names
+    else Non-maintainer downloads the artifact
+        O->>GH: Downloads the report artifact
+        GH-->>O: Encrypted file
+        O->>O: Cannot decrypt it without a maintainer's private key
+    end
+    Note over PJ,O: Postcondition: only maintainers can read the server listing
+```
+
+### Flow 8: a visitor opens the front page (AC-05, AC-15)
+
+> **Pending T5/T6.** The front-page copy, palette, type and self-hosted fonts are not built yet
+> (spec §8, due 2026-10-18). This flow is the target, not the current behaviour.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor V as user (visitor)
+    participant UI as ui (front page in the browser)
+    participant SF as external-system (KTH web server)
+    participant MC as external-system (visitor's mail client)
+
+    Note over V,SF: Precondition: the front-page copy is supplied and the palette and type derived from the logo are published
+    V->>UI: Opens the front page by address, search result or the logo on any page
+    UI->>SF: Requests the page
+    SF-->>UI: Pre-rendered page with no client-side script
+    UI->>SF: Requests styles, the logo and the self-hosted fonts from the same site
+    SF-->>UI: Styles, the unchanged logo and fonts within the 100 KB budget
+    Note over UI,SF: zero requests go to third-party hosts
+    UI-->>V: Group name, who-we-are paragraph, KTH affiliation and contact route in the group's palette and type, with the offered sections
+    alt Visitor follows the contact route
+        V->>UI: Clicks the contact link
+        UI->>MC: Opens a new message to the group contact
+    else Visitor picks an offered section
+        UI-->>V: The section page as in Flow 3
+    else A font file fails to load
+        UI-->>V: The same text in the fallback font, still readable
+    end
+    Note over V,UI: Postcondition: the visitor knows who the group is, where it sits at KTH and how to get in touch
+```
+
+### Coverage: user stories and acceptance criteria
+
+| User story | Flow(s) |
+|---|---|
+| US-01 See only real group content | Flow 1, Flow 2 |
+| US-02 Land safely on a missing page | Flow 2 |
+| US-03 Navigate only to real sections | Flow 3 |
+| US-04 Recognise the group's identity | Flow 4, Flow 8 |
+| US-05 Review the server before deletion | Flow 5, Flow 6, Flow 7 |
+| US-06 Publish mirrors the repository | Flow 1 |
+| US-07 Repository free of starter notices | N/A: repository content with no runtime behaviour (AC-14) |
+| US-08 Learn the basics from the front page | Flow 8 |
+
+| AC | Shown by |
+|---|---|
+| AC-01 | Flow 1, "Plan accepted" branch: removals applied, removed files in the report |
+| AC-02 | Flow 2, "No such file" branch |
+| AC-03 | Flow 3, offered sections in planned order |
+| AC-04 | Flow 3, "planned entry points to a page the build lacks" branch |
+| AC-05 | (pending T6) Flow 8, page in the group's palette and type with the unchanged logo. The one-time before/after screenshot sign-off is a manual acceptance, not a runtime step |
+| AC-06 | Flow 4, "A pair falls below its minimum" branch |
+| AC-07 | Flow 5, happy path |
+| AC-07b | Flow 5, precondition (deletion switched off by an accepted change) |
+| AC-08 | Flow 6, all three branches |
+| AC-09 | Flow 7, all three branches |
+| AC-10 | Flow 1 (removal) and Flow 2 (the removed address is not found) |
+| AC-11 | Flow 1, swap step that removes only owned or approved files |
+| AC-11b | Flow 1 "A check fails before any change" branch, and Flow 5 protected-address branch |
+| AC-12 | Flow 1, "A check fails before any change" branch |
+| AC-13 | Flow 1 report completion and Flow 5 listing sort (unknown files left in place and reported) |
+| AC-14 | N/A: a property of the repository's files, checked at review, not a runtime flow |
+| AC-15 | (pending T5) Flow 8, front-page content |
+
+**Flags for design (not decided here):**
+- *Participant not a §5 container:* Flows 3, 4 and 6 use the **check job** (site build plus
+  tests on every pull request and on `main`). It appears in §7 and §8 but not as a container in
+  the §5 C4 view. Consider adding it there, or note that it is part of the static site's build.
+- *Retry shape (ADR-worthy, flag only):* a failed publish is never retried automatically. The
+  maintainer re-runs it by hand, and the next publish repairs from the record. This follows from
+  ADR-0003 (no automatic rollback) but is not stated as a decision. Consider adding one line to
+  ADR-0003 via `/sdd:decide-adr`.
+- *Idempotency source:* re-runs are safe because every plan starts from the publish record and
+  the live listing. The record does not carry the source commit. Add it only if a later need
+  to tell "same commit re-run" apart from "new commit" appears.
+- *Persisted entities for data-model:* the **publish record** (every uploaded path with its
+  hash, written last by every publish) and the **publish report** (encrypted run artifact). Both
+  are files. There is no database, table or index.
+
 ## 7. Deployment view
 
 <!-- 🎯 Why: the TOPOLOGY DevOps must know without reading the deploy charts — how many replicas,
@@ -575,7 +843,7 @@ Each §1 quality goal expanded into a full scenario (numbers quoted verbatim fro
 | Guards too tight: more than the spec §7 target of "≤ 1 per month" false-alarm stops. | Low | Count stops in the maintainer's publish notes. Loosen through the approved-removals list (a reviewed rule-file edit, no code change). The 20-file routine limit is a spec §6 number: changing it is a spec change first, and `removalLimit` in `settings.json` must equal the spec value. | pasichnyi |
 | KTH graphic profile may not allow the group's own palette and type (spec §8, due 2026-10-18). | Low | Styling is tokens only, so a forced change is a `tokens.css` edit, still gated by the contrast test (QG-3). | pasichnyi |
 | Rights holder after the licence file is removed (spec §8, due 2026-10-31). | Low | Not architectural. The default "all rights reserved, held by the group" needs no code. | pasichnyi |
-| Front-page copy not yet supplied (spec §8, due before `sdd:implement`). | Low | AC-15 cannot pass without it. `implement` treats the copy as an input, not something it invents. | pasichnyi |
+| Front-page copy not yet supplied (spec §8, due 2026-10-18). | Low | AC-15 cannot pass without it. `implement` treats the copy as an input, not something it invents. | pasichnyi |
 | Stale architecture map: `docs/architecture-map.md` reflects 750bae1 (before the skeleton) and still lists the starter deletion as pending. | Low | Re-run `/sdd:survey` after this feature to map what exists, including `deploy/`. | pasichnyi |
 
 **Accepted debt (acceptable in v1, plan to fix later):**

@@ -9,7 +9,7 @@ files_hint: ["deploy/README.md", "README.md"]
 owner: "pasichnyi"
 estimate: "S"
 context_budget: "M"
-status: "todo"
+status: "done"
 ---
 
 <!-- To the executing agent: work from what is inlined here. If a slice is insufficient,

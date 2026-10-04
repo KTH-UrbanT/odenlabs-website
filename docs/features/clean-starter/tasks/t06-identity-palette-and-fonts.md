@@ -9,7 +9,7 @@ files_hint: ["src/styles/tokens.css", "src/styles/global.css", "src/styles/contr
 owner: "pasichnyi"
 estimate: "M"
 context_budget: "M"
-status: "todo"
+status: "blocked"
 ---
 
 <!-- To the executing agent: work from what is inlined here. If a slice is insufficient,
