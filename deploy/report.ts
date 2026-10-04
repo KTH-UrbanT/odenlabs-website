@@ -12,12 +12,20 @@ export interface PublishReport {
   commit: string;
   startedAt: string;
   deletion: Deletion;
-  outcome: "published" | "stopped" | "post-check-failed";
+  outcome:
+    | "in-progress"
+    | "published"
+    | "stopped"
+    | "failed-before-swap"
+    | "failed-during-swap"
+    | "post-check-failed";
   failedCheck: FailedCheck | null;
   /** Private: may name server files, so only in the encrypted report. */
   detail: string | null;
   entries: ReportEntry[];
   swapSeconds: number | null;
+  /** Folders the listing could not read; a count, never names. */
+  unreadableFolders: number;
 }
 
 /** A publish that stops on a named check; the run fails with that name. */
@@ -66,6 +74,9 @@ export function publicSummary(
   if (report.swapSeconds !== null) {
     lines.push(`- Swap: ${report.swapSeconds} s`);
   }
+  if (report.unreadableFolders > 0) {
+    lines.push(`- Unreadable folders skipped: ${report.unreadableFolders}`);
+  }
   lines.push("", "| Files | Count |", "|---|---|");
   for (const [kind] of KINDS) {
     const count = report.entries.filter((e) => e.kind === kind).length;
@@ -95,6 +106,9 @@ export function formatReport(report: PublishReport): string {
     lines.push(`Failed check: ${report.failedCheck} — ${report.detail ?? ""}`);
   }
   if (report.swapSeconds !== null) lines.push(`Swap: ${report.swapSeconds} s`);
+  if (report.unreadableFolders > 0) {
+    lines.push(`Unreadable folders skipped: ${report.unreadableFolders}`);
+  }
   for (const [kind, label] of KINDS) {
     const entries = report.entries.filter((e) => e.kind === kind);
     if (entries.length === 0) continue;

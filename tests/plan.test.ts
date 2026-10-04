@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   RECORD_FILE,
   STAGING_DIR,
+  inspectRecord,
   isOutsideListing,
   normalisePath,
   parseRecord,
@@ -125,6 +126,36 @@ describe("parseRules", () => {
       settingsText: readFileSync(`${dir}/settings.json`, "utf8"),
     });
     expect(parsed.settings.removalLimit).toBe(20);
+  });
+});
+
+describe("inspectRecord", () => {
+  const valid = publishRecord();
+
+  it("returns the record and no problem for a valid record", () => {
+    expect(inspectRecord(JSON.stringify(valid))).toEqual({
+      record: valid,
+      problem: null,
+    });
+  });
+
+  it("reports an absent record", () => {
+    expect(inspectRecord(null)).toEqual({ record: null, problem: "absent" });
+  });
+
+  it("reports an unreadable record", () => {
+    expect(inspectRecord("{")).toEqual({ record: null, problem: "unreadable" });
+  });
+
+  it("reports a malformed path as its own problem", () => {
+    const text = JSON.stringify({
+      ...valid,
+      files: [{ path: "../a.html", sha256: "0".repeat(64) }],
+    });
+    expect(inspectRecord(text)).toEqual({
+      record: null,
+      problem: "malformed-path",
+    });
   });
 });
 
@@ -406,6 +437,28 @@ describe("planPublish: stop-guards (AC-11b, AC-12)", () => {
     it("is not a clash when the listed path is the same file as a build path", () => {
       expect(stop({ listing: [...build, RECORD_FILE] }).ok).toBe(true);
     });
+  });
+
+  it("stops with malformed-path when the record lists a malformed owned path (deletion on)", () => {
+    const result = planPublish({
+      build,
+      listing: [...build, RECORD_FILE],
+      record: null,
+      recordProblem: "malformed-path",
+      rules: rules({ deletion: "on" }),
+    });
+    expectStop(result, "malformed-path");
+  });
+
+  it("stops with no-previous-record for an unreadable record (deletion on)", () => {
+    const result = planPublish({
+      build,
+      listing: [...build, RECORD_FILE],
+      record: null,
+      recordProblem: "unreadable",
+      rules: rules({ deletion: "on" }),
+    });
+    expectStop(result, "no-previous-record");
   });
 
   it("stops when the build lacks the front page", () => {

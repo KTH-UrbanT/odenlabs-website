@@ -15,6 +15,8 @@
 #
 # Usage: sh swap.sh <target-dir>
 # Exit codes: 3 = a required tool is missing, 4 = staging incomplete,
+#             5 = a target conflicts with the server's folder layout (all of
+#             3-5 happen before anything moves),
 #             other non-zero = a step failed (named on stderr).
 set -eu
 
@@ -60,7 +62,7 @@ xargs -0 sh -c '
       d=$(dirname -- "$d")
     done
   done
-' sh <"$stage/swap/rename"
+' sh <"$stage/swap/rename" || exit 5
 
 # 1. Rename the build into place.
 xargs -0 sh -c '

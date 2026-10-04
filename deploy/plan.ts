@@ -136,50 +136,66 @@ export function parseRules(files: {
 
 // --- Publish record ---------------------------------------------------------
 
+export type RecordProblem = "absent" | "unreadable" | "malformed-path";
+
 /**
- * The previous publish record, or null when there is none or it cannot be
- * trusted (invalid JSON, unknown version, a field breaking its constraints):
- * an unreadable record counts as no matching record (AC-12).
+ * Reads the previous publish record and says why it cannot be used: absent
+ * (no file), unreadable (invalid JSON, unknown version, a field breaking its
+ * constraints) or malformed-path (a listed path breaks the path rule). An
+ * unreadable record counts as no matching record (AC-12).
  */
-export function parseRecord(text: string | null): PublishRecord | null {
-  if (text === null) return null;
+export function inspectRecord(text: string | null): {
+  record: PublishRecord | null;
+  problem: RecordProblem | null;
+} {
+  const none = (problem: RecordProblem) => ({ record: null, problem });
+  if (text === null) return none("absent");
   let value: unknown;
   try {
     value = JSON.parse(text);
   } catch {
-    return null;
+    return none("unreadable");
   }
   const r = value as Partial<PublishRecord> | null;
-  if (typeof r !== "object" || r === null) return null;
-  if (r.version !== 1) return null;
+  if (typeof r !== "object" || r === null) return none("unreadable");
+  if (r.version !== 1) return none("unreadable");
   if (typeof r.commit !== "string" || !/^[0-9a-f]{40}$/.test(r.commit)) {
-    return null;
+    return none("unreadable");
   }
   if (
     typeof r.publishedAt !== "string" ||
     !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z$/.test(r.publishedAt)
   ) {
-    return null;
+    return none("unreadable");
   }
-  if (!Array.isArray(r.files) || r.files.length === 0) return null;
+  if (!Array.isArray(r.files) || r.files.length === 0) {
+    return none("unreadable");
+  }
   const seen = new Set<string>();
   for (const f of r.files) {
-    if (typeof f !== "object" || f === null) return null;
-    if (typeof f.path !== "string" || normalisePath(f.path) !== f.path) {
-      return null;
-    }
+    if (typeof f !== "object" || f === null) return none("unreadable");
+    if (typeof f.path !== "string") return none("unreadable");
+    if (normalisePath(f.path) !== f.path) return none("malformed-path");
     if (typeof f.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(f.sha256)) {
-      return null;
+      return none("unreadable");
     }
-    if (seen.has(f.path)) return null;
+    if (seen.has(f.path)) return none("unreadable");
     seen.add(f.path);
   }
   return {
-    version: 1,
-    commit: r.commit,
-    publishedAt: r.publishedAt,
-    files: r.files.map((f) => ({ path: f.path, sha256: f.sha256 })),
+    record: {
+      version: 1,
+      commit: r.commit,
+      publishedAt: r.publishedAt,
+      files: r.files.map((f) => ({ path: f.path, sha256: f.sha256 })),
+    },
+    problem: null,
   };
+}
+
+/** The previous publish record, or null when there is none or it is unusable. */
+export function parseRecord(text: string | null): PublishRecord | null {
+  return inspectRecord(text).record;
 }
 
 // --- Planning ---------------------------------------------------------------
@@ -209,6 +225,9 @@ export type FailedCheck =
   | "removal-limit"
   | "protected-clash"
   | "layout-clash"
+  | "listing-failed"
+  | "upload-failed"
+  | "swap-failed"
   | "malformed-path"
   | "no-maintainer-key"
   | "encryption-failed"
@@ -222,6 +241,8 @@ export interface PlanInput {
   listing: string[];
   /** The previous publish record, or null (none or unreadable). */
   record: PublishRecord | null;
+  /** Why `record` is null, when known (see inspectRecord). */
+  recordProblem?: RecordProblem | null;
   rules: Rules;
 }
 
@@ -364,6 +385,12 @@ function firstFailedCheck(
   }
   if (rules.settings.deletion === "off") return null;
 
+  if (record === null && input.recordProblem === "malformed-path") {
+    return {
+      failedCheck: "malformed-path",
+      detail: "previous record lists a malformed path",
+    };
+  }
   if (record === null) {
     return {
       failedCheck: "no-previous-record",

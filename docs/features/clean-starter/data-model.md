@@ -250,14 +250,16 @@ stops before any upload (ADR-0004, Flow 5).
 | `commit` | `string` | 40 hex characters | |
 | `startedAt` | `string` | ISO 8601 UTC | |
 | `deletion` | `"on" \| "off"` | | Switch value in force for this publish |
-| `outcome` | `"published" \| "stopped" \| "post-check-failed"` | required | `stopped` = a planner guard failed and the server is untouched |
-| `failedCheck` | `FailedCheck \| null` | set iff `outcome` ≠ `published` | Closed set, below |
+| `outcome` | `"in-progress" \| "published" \| "stopped" \| "failed-before-swap" \| "failed-during-swap" \| "post-check-failed"` | required | `in-progress` = the interim report sealed before upload; `stopped` = a planner guard failed and the server is untouched; `failed-before-swap` = upload or a swap pre-check failed, server untouched; `failed-during-swap` = the swap began and failed |
+| `failedCheck` | `FailedCheck \| null` | set iff `outcome` is neither `published` nor `in-progress` | Closed set, below |
 | `entries` | `ReportEntry[]` | | The server listing plus outcome lists |
 | `swapSeconds` | `number \| null` | | Mixed-version window measured by `swap.sh` (≤ 5 s target) |
+| `unreadableFolders` | `number` | ≥ 0 | Folders the listing could not read; a count only, also shown publicly |
 
 `FailedCheck` is a closed set: `missing-front-page`, `missing-logo`, `no-previous-record`,
 `record-without-front-page-or-logo`, `removal-limit`, `protected-clash`, `malformed-path`,
-`no-maintainer-key`, `encryption-failed`, `remote-tools-missing`, `post-publish-check`. The
+`no-maintainer-key`, `encryption-failed`, `remote-tools-missing`, `layout-clash`, `listing-failed`, `upload-failed`, `swap-failed`,
+`post-publish-check`. The
 **public** job summary carries only these names and counts per `ReportEntry.kind` (sad §8
 "Logging and disclosure").
 

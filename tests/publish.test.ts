@@ -17,7 +17,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { publish, type PublishOptions } from "../deploy/publish.ts";
 import type { PublishReport } from "../deploy/report.ts";
 import { localExecutor, type Executor } from "../deploy/ssh.ts";
-import { COMMIT, starterFiles } from "./fixtures/publish.ts";
+import { COMMIT, publishRecord, starterFiles } from "./fixtures/publish.ts";
 
 let root: string;
 let target: string;
@@ -301,6 +301,184 @@ describe("publish", () => {
     delete after[".publish-record.json"];
     delete rerun[".publish-record.json"];
     expect(rerun).toEqual(after);
+  });
+});
+
+/** Wraps the local executor; `fake` may answer a command instead of it. */
+function intercepting(fake: (command: string) => string | null): Executor {
+  const real = localExecutor();
+  return {
+    run(command: string, input?: Buffer) {
+      const replacement = fake(command);
+      return real.run(replacement ?? command, input);
+    },
+  };
+}
+
+describe("failures after the report is sealed (F-03)", () => {
+  it("seals an interim report that is in progress, not stopped", async () => {
+    await publish(options());
+    expect(encrypted[0]).toContain("Outcome: in-progress");
+    expect(encrypted[0]).not.toContain("Failed check");
+  });
+
+  it("re-seals and summarises when the upload fails, saying the server is untouched", async () => {
+    const before = files(target);
+    const executor = intercepting((c) =>
+      c.includes("tar -xf") ? "echo 'tar: kthit.txt: boom' >&2; exit 2" : null,
+    );
+
+    const result = await publish(options({ executor }));
+
+    expect(result.ok).toBe(false);
+    expect(result.report.outcome).toBe("failed-before-swap");
+    expect(result.report.failedCheck).toBe("upload-failed");
+    expect(encrypted.at(-1)).toContain("Outcome: failed-before-swap");
+    expect(summary).toContain("upload-failed");
+    expect(summary).not.toContain("kthit.txt");
+    expect(files(target)).toEqual(before);
+  });
+
+  it("re-seals and summarises when the swap fails mid-rename, saying it began", async () => {
+    const executor = intercepting((c) =>
+      c.includes("swap.sh")
+        ? c.replace(
+            /sh \.publish-staging\/swap\/swap\.sh \./,
+            "mv -f -- .publish-staging/files/index.html index.html; " +
+              "echo 'rename-failed: kthit.txt' >&2; exit 255",
+          )
+        : null,
+    );
+
+    const result = await publish(options({ executor }));
+
+    expect(result.ok).toBe(false);
+    expect(result.report.outcome).toBe("failed-during-swap");
+    expect(result.report.failedCheck).toBe("swap-failed");
+    expect(files(target)["index.html"]).toBe("new front page");
+    expect(encrypted.at(-1)).toContain("Outcome: failed-during-swap");
+    expect(encrypted.at(-1)).toContain("kthit.txt");
+    expect(summary).toContain("swap-failed");
+    expect(summary).not.toContain("kthit.txt");
+  });
+
+  it("says the server is untouched when the swap script refuses before moving anything", async () => {
+    put(target, "_astro", "a file where the build needs a folder");
+    const before = files(target);
+
+    const result = await publish(options());
+
+    expect(result.ok).toBe(false);
+    expect(result.report.failedCheck).toBe("layout-clash");
+    expect(files(target)).toEqual(before);
+  });
+
+  it("turns a failed HTTPS request into a post-publish-check failure", async () => {
+    const result = await publish(
+      options({
+        fetchStatus: async () => {
+          throw new Error("network down");
+        },
+      }),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.report.failedCheck).toBe("post-publish-check");
+    expect(summary).toContain("post-publish-check");
+  });
+
+  it("warns about an unreadable record with deletion off and publishes", async () => {
+    put(target, ".publish-record.json", "{ not json");
+
+    const result = await publish(options());
+
+    expect(result.ok).toBe(true);
+    expect(result.report.entries).toContainEqual(
+      expect.objectContaining({ kind: "warning" }),
+    );
+    expect(encrypted.at(-1)).toMatch(/publish record.*unreadable/i);
+  });
+
+  it("stops with malformed-path when the record lists a malformed owned path and deletion is on", async () => {
+    put(
+      target,
+      ".publish-record.json",
+      JSON.stringify(publishRecord({ paths: ["index.html", "../x"] })),
+    );
+    setRules({ protected: [".htaccess"], deletion: "on" });
+    const before = files(target);
+
+    const result = await publish(options());
+
+    expect(result.ok).toBe(false);
+    expect(result.report.failedCheck).toBe("malformed-path");
+    expect(files(target)).toEqual(before);
+  });
+
+  it("logs the fingerprint of every key the report was encrypted to", async () => {
+    const lines: string[] = [];
+    await publish(options({ log: (l) => lines.push(l) }));
+    expect(lines.join("\n")).toContain("F00");
+  });
+
+  it("probes each remote tool separately and stops when one is missing", async () => {
+    const commands: string[] = [];
+    const executor = intercepting((c) => {
+      commands.push(c);
+      return c.includes("command -v") ? "echo awk; exit 1" : null;
+    });
+    const before = files(target);
+
+    const result = await publish(options({ executor }));
+
+    expect(result.ok).toBe(false);
+    expect(result.report.failedCheck).toBe("remote-tools-missing");
+    const probe = commands.find((c) => c.includes("command -v")) ?? "";
+    for (const tool of [
+      "find",
+      "tar",
+      "mv",
+      "xargs",
+      "awk",
+      "rmdir",
+      "dirname",
+      "mkdir",
+      "rm",
+    ]) {
+      expect(probe).toMatch(new RegExp(`\\b${tool}\\b`));
+    }
+    expect(probe).not.toMatch(/command -v find tar/);
+    expect(files(target)).toEqual(before);
+  });
+
+  it("stops, without naming anything, when the listing itself fails", async () => {
+    const before = files(target);
+    const executor = intercepting((c) =>
+      c.includes("-print0")
+        ? "echo 'find: ./kthit.txt: Input/output error' >&2; exit 1"
+        : null,
+    );
+
+    const result = await publish(options({ executor }));
+
+    expect(result.ok).toBe(false);
+    expect(result.report.failedCheck).toBe("listing-failed");
+    expect(summary).not.toContain("kthit.txt");
+    expect(files(target)).toEqual(before);
+  });
+
+  it("counts unreadable folders, reporting the count publicly and a warning privately", async () => {
+    put(target, "kthit-private/secret.txt", "unreadable");
+    chmodSync(join(target, "kthit-private"), 0o000);
+    try {
+      const result = await publish(options());
+      expect(result.ok).toBe(true);
+      expect(result.report.unreadableFolders).toBe(1);
+      expect(summary).toMatch(/Unreadable folders[^\n]*1/);
+      expect(summary).not.toContain("kthit-private");
+      expect(encrypted.at(-1)).toMatch(/Unreadable folders[^\n]*1/);
+    } finally {
+      chmodSync(join(target, "kthit-private"), 0o755);
+    }
   });
 });
 

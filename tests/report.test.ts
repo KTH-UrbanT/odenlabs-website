@@ -23,6 +23,7 @@ const report: PublishReport = {
   failedCheck: null,
   detail: null,
   swapSeconds: 0.42,
+  unreadableFolders: 0,
   entries: [
     { kind: "uploaded", path: "index.html" },
     { kind: "uploaded", path: "logo.svg" },
@@ -64,6 +65,24 @@ describe("publicSummary", () => {
     expect(summary).not.toContain(SECRET);
   });
 
+  it("shows the count of unreadable folders but never names one", () => {
+    const summary = publicSummary({ ...report, unreadableFolders: 3 }, []);
+    expect(summary).toMatch(/Unreadable folders[^\n]*3/);
+  });
+
+  it("says whether the swap began when a run failed after the upload", () => {
+    const failed: PublishReport = {
+      ...report,
+      outcome: "failed-during-swap",
+      failedCheck: "swap-failed",
+      detail: `rename-failed: ${SECRET}`,
+    };
+    const summary = publicSummary(failed, []);
+    expect(summary).toContain("failed-during-swap");
+    expect(summary).toContain("swap-failed");
+    expect(summary).not.toContain(SECRET);
+  });
+
   it("includes public notes such as missing navigation pages (AC-04)", () => {
     const summary = publicSummary(report, [
       "Navigation entry People (/people/) points to a missing page",
@@ -79,6 +98,13 @@ describe("formatReport", () => {
     expect(text).toMatch(/Unknown[\s\S]*kthit-verification/);
     expect(text).toMatch(/Protected[\s\S]*\.htaccess/);
     expect(text).toContain(JSON.stringify("odd\nname"));
+  });
+});
+
+describe("formatReport: listing problems", () => {
+  it("states the unreadable folder count for the maintainers", () => {
+    const text = formatReport({ ...report, unreadableFolders: 2 });
+    expect(text).toMatch(/Unreadable folders[^\n]*2/);
   });
 });
 

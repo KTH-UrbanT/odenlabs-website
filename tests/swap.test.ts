@@ -176,7 +176,7 @@ describe("swap.sh", () => {
 
     const result = swap();
 
-    expect(result.status).not.toBe(0);
+    expect(result.status).toBe(5);
     expect(result.stderr).toMatch(/layout-clash/);
     expect(snapshot()).toEqual(before);
   });
@@ -189,7 +189,7 @@ describe("swap.sh", () => {
 
     const result = swap();
 
-    expect(result.status).not.toBe(0);
+    expect(result.status).toBe(5);
     expect(result.stderr).toMatch(/layout-clash/);
     expect(readdirSync(outside)).toEqual([]);
     expect(snapshot()).toEqual(before);
@@ -202,7 +202,7 @@ describe("swap.sh", () => {
 
     const result = swap();
 
-    expect(result.status).not.toBe(0);
+    expect(result.status).toBe(5);
     expect(result.stderr).toMatch(/layout-clash/);
     expect(snapshot()).toEqual(before);
   });
