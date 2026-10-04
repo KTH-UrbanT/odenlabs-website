@@ -1,14 +1,24 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  RECORD_FILE,
+  STAGING_DIR,
   isOutsideListing,
   normalisePath,
   parseRecord,
   parseRules,
   parseRuleList,
   parseSettings,
+  planPublish,
+  type PublishRecord,
+  type ReportEntry,
 } from "../deploy/plan.ts";
-import { publishRecord } from "./fixtures/publish.ts";
+import {
+  buildFiles,
+  publishRecord,
+  rules,
+  starterFiles,
+} from "./fixtures/publish.ts";
 
 describe("normalisePath", () => {
   it("accepts relative paths and strips a leading ./", () => {
@@ -160,5 +170,162 @@ describe("parseRecord", () => {
   it("keeps a record that lacks the logo, for the planner to judge", () => {
     const noLogo = publishRecord({ paths: ["index.html"] });
     expect(parseRecord(JSON.stringify(noLogo))).toEqual(noLogo);
+  });
+});
+
+describe("planPublish: classification and plan", () => {
+  const build = buildFiles();
+  const kinds = (entries: ReportEntry[], kind: ReportEntry["kind"]) =>
+    entries.filter((e) => e.kind === kind).map((e) => e.path);
+
+  function plan(
+    overrides: Partial<{
+      build: string[];
+      listing: string[];
+      record: PublishRecord | null;
+      protected: string[];
+      approved: string[];
+      deletion: "on" | "off";
+    }> = {},
+  ) {
+    const result = planPublish({
+      build: overrides.build ?? build,
+      listing: overrides.listing ?? [...build, RECORD_FILE],
+      record:
+        overrides.record === undefined ? publishRecord() : overrides.record,
+      rules: rules(overrides),
+    });
+    if (!result.ok) throw new Error(`unexpected stop: ${result.failedCheck}`);
+    return result;
+  }
+
+  it("uploads every build file and reports it as uploaded", () => {
+    const result = plan();
+    expect(result.upload).toEqual([...build].sort());
+    expect(kinds(result.entries, "uploaded")).toEqual([...build].sort());
+  });
+
+  describe("with deletion off (AC-07, AC-07b)", () => {
+    const listing = [
+      ...build,
+      "old/page.html",
+      "approved.html",
+      "keep.html",
+      "kthit.txt",
+      RECORD_FILE,
+      `${STAGING_DIR}/index.html`,
+    ];
+    const record = publishRecord({ paths: [...build, "old/page.html"] });
+    const result = plan({
+      listing,
+      record,
+      protected: ["keep.html"],
+      approved: ["approved.html"],
+    });
+
+    it("removes nothing", () => {
+      expect(result.remove).toEqual([]);
+      expect(kinds(result.entries, "removed")).toEqual([]);
+    });
+
+    it("lists every server file the build lacks, sorted by ownership", () => {
+      expect(kinds(result.entries, "owned-pending")).toEqual(["old/page.html"]);
+      expect(kinds(result.entries, "approved-pending")).toEqual([
+        "approved.html",
+      ]);
+      expect(kinds(result.entries, "protected")).toEqual(["keep.html"]);
+      expect(kinds(result.entries, "unknown")).toEqual(["kthit.txt"]);
+    });
+
+    it("never classifies the record or the staging folder", () => {
+      const paths = result.entries.map((e) => e.path);
+      expect(paths).not.toContain(RECORD_FILE);
+      expect(paths.some((p) => p.startsWith(STAGING_DIR))).toBe(false);
+    });
+
+    it("plans the first publish (no record) as upload and list only", () => {
+      const first = plan({
+        record: null,
+        listing: ["index.html", "demo.html"],
+      });
+      expect(first.remove).toEqual([]);
+      expect(kinds(first.entries, "unknown")).toEqual(["demo.html"]);
+    });
+  });
+
+  describe("with deletion on", () => {
+    it("removes owned files missing from the build (AC-10)", () => {
+      const result = plan({
+        deletion: "on",
+        listing: [...build, "research/index.html", RECORD_FILE],
+        record: publishRecord({ paths: [...build, "research/index.html"] }),
+      });
+      expect(result.remove).toEqual(["research/index.html"]);
+      expect(kinds(result.entries, "removed")).toEqual(["research/index.html"]);
+    });
+
+    it("removes approved starter files (AC-01)", () => {
+      const starter = starterFiles(3);
+      const result = plan({
+        deletion: "on",
+        listing: [...build, ...starter, RECORD_FILE],
+        approved: starter,
+      });
+      expect(result.remove).toEqual(starter);
+      expect(kinds(result.entries, "removed")).toEqual(starter);
+    });
+
+    it("never removes a protected file, even one a stale record lists (AC-11)", () => {
+      const result = plan({
+        deletion: "on",
+        listing: [...build, "keep.html", RECORD_FILE],
+        record: publishRecord({ paths: [...build, "keep.html"] }),
+        protected: ["keep.html"],
+      });
+      expect(result.remove).toEqual([]);
+      expect(kinds(result.entries, "protected")).toEqual(["keep.html"]);
+    });
+
+    it("leaves unknown files in place and reports them on every publish (AC-13)", () => {
+      const result = plan({
+        deletion: "on",
+        listing: [...build, "kthit.txt", RECORD_FILE],
+      });
+      expect(result.remove).toEqual([]);
+      expect(kinds(result.entries, "unknown")).toEqual(["kthit.txt"]);
+    });
+  });
+
+  it("reports an unknown file with a malformed name and never acts on it", () => {
+    const result = plan({
+      deletion: "on",
+      listing: [...build, "odd\nname.txt", RECORD_FILE],
+    });
+    expect(result.remove).toEqual([]);
+    expect(result.entries).toContainEqual({
+      kind: "unknown",
+      path: "odd\nname.txt",
+      malformed: true,
+    });
+  });
+
+  it("overwrites an unknown file at a build address and warns about it", () => {
+    const result = plan({
+      listing: [...build, RECORD_FILE],
+      record: publishRecord({ paths: build.filter((p) => p !== "icon.png") }),
+    });
+    expect(result.upload).toContain("icon.png");
+    expect(result.entries).toContainEqual(
+      expect.objectContaining({ kind: "warning", path: "icon.png" }),
+    );
+  });
+
+  it("gives the same plan for the same inputs (a re-run adds no change)", () => {
+    const input = {
+      deletion: "on" as const,
+      listing: [...build, "old.html", RECORD_FILE],
+      record: publishRecord({ paths: [...build, "old.html"] }),
+    };
+    expect(plan(input)).toEqual(plan(input));
   });
 });

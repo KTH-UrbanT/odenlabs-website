@@ -181,3 +181,123 @@ export function parseRecord(text: string | null): PublishRecord | null {
     files: r.files.map((f) => ({ path: f.path, sha256: f.sha256 })),
   };
 }
+
+// --- Planning ---------------------------------------------------------------
+
+export type EntryKind =
+  | "uploaded"
+  | "removed"
+  | "unknown"
+  | "protected"
+  | "approved-pending"
+  | "owned-pending"
+  | "warning";
+
+/** One line of the maintainer-only publish report (data-model.md). */
+export interface ReportEntry {
+  kind: EntryKind;
+  path: string;
+  malformed?: boolean;
+  message?: string;
+}
+
+export type FailedCheck =
+  | "missing-front-page"
+  | "missing-logo"
+  | "no-previous-record"
+  | "record-without-front-page-or-logo"
+  | "removal-limit"
+  | "protected-clash"
+  | "malformed-path"
+  | "no-maintainer-key"
+  | "encryption-failed"
+  | "remote-tools-missing"
+  | "post-publish-check";
+
+export interface PlanInput {
+  /** Paths of the built files, relative to dist/. */
+  build: string[];
+  /** Raw names of the files in the target folder, as the server lists them. */
+  listing: string[];
+  /** The previous publish record, or null (none or unreadable). */
+  record: PublishRecord | null;
+  rules: Rules;
+}
+
+export type PlanResult =
+  | { ok: true; upload: string[]; remove: string[]; entries: ReportEntry[] }
+  | {
+      ok: false;
+      failedCheck: FailedCheck;
+      detail: string;
+      entries: ReportEntry[];
+    };
+
+export type Ownership = "protected" | "owned" | "approved" | "unknown";
+
+/** Protected wins over owned, owned over approved; anything else is unknown. */
+export function classify(
+  path: string,
+  record: PublishRecord | null,
+  rules: Rules,
+): Ownership {
+  if (rules.protected.includes(path)) return "protected";
+  if (record?.files.some((f) => f.path === path)) return "owned";
+  if (rules.approved.includes(path)) return "approved";
+  return "unknown";
+}
+
+const byPath = (a: ReportEntry, b: ReportEntry) =>
+  a.path < b.path ? -1 : a.path > b.path ? 1 : 0;
+
+/**
+ * Plans one publish: upload the whole build; with deletion on, remove owned
+ * or approved files the build no longer has; never touch protected or
+ * unknown files; report every server file the build lacks.
+ */
+export function planPublish(input: PlanInput): PlanResult {
+  const { record, rules } = input;
+  const deletionOn = rules.settings.deletion === "on";
+  const build = [...input.build].sort();
+  const inBuild = new Set(build);
+  const entries: ReportEntry[] = build.map((path) => ({
+    kind: "uploaded",
+    path,
+  }));
+  const remove: string[] = [];
+
+  for (const raw of input.listing) {
+    const path = normalisePath(raw);
+    if (path === null) {
+      entries.push({ kind: "unknown", path: raw, malformed: true });
+      continue;
+    }
+    if (isOutsideListing(path)) continue;
+    const ownership = classify(path, record, rules);
+    if (inBuild.has(path)) {
+      if (ownership === "unknown") {
+        entries.push({
+          kind: "warning",
+          path,
+          message: "replaced a file the site never published",
+        });
+      }
+      continue;
+    }
+    if (ownership === "protected" || ownership === "unknown") {
+      entries.push({ kind: ownership, path });
+    } else if (deletionOn) {
+      remove.push(path);
+      entries.push({ kind: "removed", path });
+    } else {
+      entries.push({ kind: `${ownership}-pending`, path });
+    }
+  }
+
+  return {
+    ok: true,
+    upload: build,
+    remove: remove.sort(),
+    entries: entries.sort(byPath),
+  };
+}
