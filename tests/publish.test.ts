@@ -482,6 +482,42 @@ describe("failures after the report is sealed (F-03)", () => {
   });
 });
 
+describe("owned leftovers stay in the record (F-07)", () => {
+  const recordPaths = () =>
+    (
+      JSON.parse(files(target)[".publish-record.json"]) as {
+        files: { path: string; sha256: string }[];
+      }
+    ).files;
+
+  it("keeps a page removed from the repository in the record while deletion is off, then removes it once deletion is on", async () => {
+    put(dist, "research/index.html", "research");
+    await publish(options());
+    const first = recordPaths().find((f) => f.path === "research/index.html");
+    expect(first).toBeDefined();
+
+    rmSync(join(dist, "research"), { recursive: true });
+    const second = await publish(options());
+    expect(second.ok).toBe(true);
+    expect(existsSync(join(target, "research/index.html"))).toBe(true);
+    expect(recordPaths().find((f) => f.path === "research/index.html")).toEqual(
+      first,
+    );
+    expect(second.report.entries).toContainEqual({
+      kind: "owned-pending",
+      path: "research/index.html",
+    });
+
+    setRules({ protected: [".htaccess"], deletion: "on" });
+    const third = await publish(options());
+    expect(third.ok).toBe(true);
+    expect(existsSync(join(target, "research/index.html"))).toBe(false);
+    expect(recordPaths().map((f) => f.path)).not.toContain(
+      "research/index.html",
+    );
+  });
+});
+
 describe("the public report shape", () => {
   it("types the result report as a PublishReport", async () => {
     const result = await publish(options());

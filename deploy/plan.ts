@@ -250,7 +250,14 @@ export interface PlanInput {
 }
 
 export type PlanResult =
-  | { ok: true; upload: string[]; remove: string[]; entries: ReportEntry[] }
+  | {
+      ok: true;
+      upload: string[];
+      remove: string[];
+      /** Owned files left on the server, kept in the new record. */
+      carry: RecordedFile[];
+      entries: ReportEntry[];
+    }
   | {
       ok: false;
       failedCheck: FailedCheck;
@@ -280,6 +287,7 @@ const REPLACED_UNKNOWN = "replaced a file the site never published";
 interface Sorted {
   upload: string[];
   remove: string[];
+  carry: RecordedFile[];
   entries: ReportEntry[];
   /** Normalised paths present in the target folder. */
   present: Set<string>;
@@ -295,6 +303,7 @@ function sortListing(input: PlanInput, deletionOn: boolean): Sorted {
     path,
   }));
   const remove: string[] = [];
+  const carry: RecordedFile[] = [];
   const present = new Set<string>();
 
   for (const raw of input.listing) {
@@ -323,6 +332,8 @@ function sortListing(input: PlanInput, deletionOn: boolean): Sorted {
       entries.push({ kind: "removed", path });
     } else {
       entries.push({ kind: `${ownership}-pending`, path });
+      const owned = record?.files.find((f) => f.path === path);
+      if (ownership === "owned" && owned) carry.push(owned);
     }
   }
   for (const path of rules.approved) {
@@ -334,7 +345,8 @@ function sortListing(input: PlanInput, deletionOn: boolean): Sorted {
       });
     }
   }
-  return { upload: build, remove: remove.sort(), entries, present };
+  carry.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return { upload: build, remove: remove.sort(), carry, entries, present };
 }
 
 /**
@@ -466,6 +478,7 @@ export function planPublish(input: PlanInput): PlanResult {
     ok: true,
     upload: sorted.upload,
     remove: sorted.remove,
+    carry: sorted.carry,
     entries: sorted.entries.sort(byPath),
   };
 }

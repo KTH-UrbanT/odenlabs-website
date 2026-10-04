@@ -282,10 +282,15 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
     version: 1,
     commit: options.commit,
     publishedAt: new Date().toISOString(),
-    files: plan.upload.map((path) => ({
-      path,
-      sha256: sha256(join(options.distDir, path)),
-    })),
+    files: [
+      ...plan.upload.map((path) => ({
+        path,
+        sha256: sha256(join(options.distDir, path)),
+      })),
+      // Owned files this publish left in place keep their old hash, so a later
+      // publish with deletion on still removes them.
+      ...plan.carry,
+    ].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0)),
   };
   const local = mkdtempSync(join(tmpdir(), "publish-stage-"));
   try {

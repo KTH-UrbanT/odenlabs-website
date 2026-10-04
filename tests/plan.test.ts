@@ -349,6 +349,65 @@ describe("planPublish: classification and plan", () => {
     });
   });
 
+  describe("carried owned files (F-07)", () => {
+    const old = "old.html";
+    const oldSha = "a".repeat(64);
+    const record = () => {
+      const r = publishRecord({ paths: [...build, old, "gone.html"] });
+      r.files = r.files.map((f) =>
+        f.path === old ? { ...f, sha256: oldSha } : f,
+      );
+      return r;
+    };
+
+    it("carries an owned file the build dropped, with its previous hash, when deletion is off", () => {
+      const result = plan({
+        deletion: "off",
+        listing: [...build, old, RECORD_FILE],
+        record: record(),
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.carry).toEqual([{ path: old, sha256: oldSha }]);
+      }
+    });
+
+    it("drops owned files that are no longer on the server", () => {
+      const result = plan({
+        deletion: "off",
+        listing: [...build, old, RECORD_FILE],
+        record: record(),
+      });
+      if (result.ok) {
+        expect(result.carry.map((f) => f.path)).not.toContain("gone.html");
+      }
+    });
+
+    it("carries nothing when deletion is on (the files are removed)", () => {
+      const result = plan({
+        deletion: "on",
+        listing: [...build, old, RECORD_FILE],
+        record: record(),
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.carry).toEqual([]);
+        expect(result.remove).toEqual([old]);
+      }
+    });
+
+    it("does not carry files that are in the build or protected", () => {
+      const result = plan({
+        deletion: "off",
+        listing: [...build, old, RECORD_FILE],
+        record: record(),
+        protected: [old],
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.carry).toEqual([]);
+    });
+  });
+
   it("overwrites an unknown file at a build address and warns about it", () => {
     const result = plan({
       listing: [...build, RECORD_FILE],
