@@ -68,10 +68,10 @@ A content site, not a service: the "modules" are Astro's standard folders.
 
 ## Conventions (cited — the rules a new feature must match)
 
-To be established by `/sdd:scaffold`; citations become real once the files exist.
+Materialized by `/sdd:scaffold` on 2026-10-04; also stated in `CLAUDE.md`.
 
 - **Module wiring / registration:** file-based routing; a new page type is a file in `src/pages/`, a new content type is a collection in `src/content.config.ts`.
-- **Error handling:** fail the build, never the visitor. Invalid content (bad schema, dangling reference) must make `astro check` / `astro build` fail; no runtime error paths, because nothing runs at request time.
+- **Error handling:** fail the build, never the visitor. Invalid content (bad schema, dangling reference) must make `astro check` / `astro build` fail; no runtime error paths, because nothing runs at request time. Astro 7 only *logs* dangling `reference()` IDs, so `src/layouts/Base.astro` calls `assertContentIntegrity()` (`src/lib/content-integrity.ts` → `src/lib/references.ts`), which throws during the build.
 - **IDs:** the entry's file name in kebab-case (`people/jane-doe.md` → `jane-doe`); cross-links use Astro `reference()` to these IDs. ADR [0002](adr/0002-keep-content-as-typed-files-in-git.md).
 - **Persistence / DB access:** none. Content collections read from the filesystem at build time; external data (publications, step 7) arrives as a generated file under `src/data/`, never fetched at request time.
 - **Migrations:** none (no database). Changing a schema is a code change; `astro check` reports every entry that no longer conforms.

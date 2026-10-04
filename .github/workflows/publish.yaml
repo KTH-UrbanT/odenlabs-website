@@ -1,30 +1,60 @@
-name: Deploy website to KTH virtual server
-
-env:
-  WC_HUGO_VERSION: "0.135.0"
+name: Check and deploy
 
 on:
+  pull_request:
   push:
     branches: ["main"]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  deploy:
+  check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Hugo
-        uses: peaceiris/actions-hugo@v3
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          hugo-version: ${{ env.WC_HUGO_VERSION }}
-          extended: true
+          node-version-file: .nvmrc
+          cache: npm
 
-      - name: Build site with Hugo
-        env:
-          HUGO_ENVIRONMENT: production
-        run: hugo --minify
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (types, content schema, formatting)
+        run: npm run lint
+
+      - name: Test (unit + build smoke test)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload site
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist/
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-kth
+      cancel-in-progress: false
+    steps:
+      - name: Download site
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
 
       - name: Copy site to KTH server via SSH
         uses: appleboy/scp-action@v0.1.7
@@ -32,5 +62,6 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "public/*"
+          source: "dist/*"
+          strip_components: 1
           target: ${{ secrets.SSH_TARGET_DIR }}

@@ -1,12 +1,15 @@
 # IDEs
 .idea/
+.vscode/
 
-# Hugo
-/resources/
-public/
-assets/jsconfig.json
-/hugo_stats.json
-.hugo_build.lock
+# Dependencies and build output
+node_modules/
+dist/
+.astro/
+
+# OS
+.DS_Store
+
 # SDD per-developer files
 .claude/*.local.md
 .worktrees/

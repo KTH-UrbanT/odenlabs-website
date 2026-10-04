@@ -1,0 +1,56 @@
+---
+const nav = [
+  { href: "/research/", label: "Research" },
+  { href: "/people/", label: "People" },
+  { href: "/join/", label: "Join/Contact" },
+];
+---
+
+<header>
+  <a class="logo" href="/">
+    <img src="/logo.svg" alt="Oden Lab" width="230" height="175" />
+  </a>
+  <nav aria-label="Main">
+    <ul>
+      {nav.map((item) => (
+        <li>
+          <a href={item.href}>{item.label}</a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+</header>
+
+<style>
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    max-width: var(--content-width);
+    width: 100%;
+    margin: 0 auto;
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .logo img {
+    display: block;
+    height: var(--space-16);
+    width: auto;
+  }
+
+  ul {
+    display: flex;
+    gap: var(--space-6);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  nav a {
+    font-weight: var(--weight-bold);
+    text-decoration: none;
+  }
+</style>
