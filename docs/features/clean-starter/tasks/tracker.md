@@ -5,7 +5,7 @@
 
 | # | Task | Layer | Owner | Estimate | Blocked by | Status |
 |---|---|---|---|---|---|---|
-| T1 | Planned sections + offered-sections helpers | domain | pasichnyi | S | — | todo |
+| T1 | Planned sections + offered-sections helpers | domain | pasichnyi | S | — | done |
 | T2 | WCAG contrast check over declared pairs | domain | pasichnyi | S | — | todo |
 | T3 | Header renders only offered sections | ui | pasichnyi | S | T1 | todo |
 | T4 | Not-found page | ui | pasichnyi | S | — | todo |
