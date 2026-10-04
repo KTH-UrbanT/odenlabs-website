@@ -5,6 +5,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { sections } from "../src/data/sections";
+import { findOffSiteRequests } from "../src/lib/offsite-requests";
 
 const dist = "dist";
 
@@ -82,5 +83,20 @@ describe("header navigation (AC-03)", () => {
       .map(([, href, label]) => ({ label: label.trim(), href }))
       .filter((l) => sections.some((s) => s.href === l.href));
     expect(offered).toEqual(expected);
+  });
+});
+
+describe("third-party requests (spec §6 NFR)", () => {
+  it("no built page or stylesheet requests another host", () => {
+    const config = readFileSync("astro.config.mjs", "utf8");
+    const site = /site:\s*"([^"]+)"/.exec(config)?.[1];
+    expect(site).toBeDefined();
+    const ownHost = new URL(site!).host;
+    const offenders = builtFiles()
+      .filter((f) => /\.(html|css)$/.test(f))
+      .flatMap((f) =>
+        findOffSiteRequests(html(f), ownHost).map((url) => `${f} → ${url}`),
+      );
+    expect(offenders).toEqual([]);
   });
 });
