@@ -19,6 +19,6 @@
 | T12 | Publish report (public + encrypted) | infra | pasichnyi | M | T8 | done |
 | T13 | Publish shell over SSH | app | pasichnyi | 1d | T1, T10, T11, T12 | done |
 | T14 | Workflow + CODEOWNERS | wiring | pasichnyi | S | T13 | done |
-| T15 | Runbook + repository sweep | docs | pasichnyi | S | T14 | todo |
+| T15 | Runbook + repository sweep | docs | pasichnyi | S | T14 | done |
 
 **Total:** 15 tasks, ~8 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).

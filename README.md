@@ -29,6 +29,13 @@ in kebab-case. Each folder has a `README.md` listing the fields.
 If a field is missing or an ID points at an entry that does not exist, the build fails
 and tells you which file to fix, so a mistake never reaches the live site.
 
+## Publishing
+
+Merging to `main` publishes the site to the shared KTH server folder. A publish
+removes only files the site itself published or a maintainer approved, and stops
+before changing anything when something looks wrong. How it decides, the rules files
+and the rollout steps: [`deploy/README.md`](deploy/README.md).
+
 ## Deploy
 
 GitHub Actions (`.github/workflows/publish.yaml`):
