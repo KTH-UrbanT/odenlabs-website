@@ -17,7 +17,9 @@ ticket: "roadmap step 1 + step 8 (starter cleanup) — docs/roadmap.md"
 
 Every publish produces a report for the maintainers: the server-folder listing when deletion is
 off (AC-07), unknown files (AC-13), removed files (AC-01, AC-10), the check that stopped a
-publish (AC-11b, AC-12) and warnings (AC-04, AC-06). The listing and the unknown files describe a
+publish (AC-11b, AC-12) and warnings (AC-04). A failing colour pair (AC-06) never reaches the
+report: it fails the check job, so no publish runs, and the pair is named in that job's public
+log (pair names are token names, which are public). The listing and the unknown files describe a
 shared university server, so they must reach maintainers only and never appear in public records
 (AC-09, spec §6.1). The repository is public. Its Actions logs are public, and its workflow
 artifacts can be downloaded by any signed-in GitHub user.

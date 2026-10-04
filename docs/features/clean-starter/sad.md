@@ -35,7 +35,8 @@ and a minimal slice of step 2 (spec §1).
 
 1. **Safety of the shared server folder.** A publish never changes a protected file, never deletes
    a file it does not own or that was not approved, and stops before deleting when the build or
-   folder looks wrong. Routine removals are capped at ≤ 20 files per publish.
+   folder looks wrong. Routine removal limit: "≤ 20 files removed per publish without a
+   maintainer-approved list" (spec §6).
 2. **An accurate mirror.** What is live equals what was last published. 100% of the reviewed
    starter addresses show the not-found page, and no navigation entry leads nowhere.
 3. **Readable and self-contained pages.** Text meets ≥ 4.5:1 (body) / ≥ 3:1 (large text, UI)
@@ -352,11 +353,13 @@ sequenceDiagram
         PJ-->>GH: Fails the run, server untouched
         GH-->>M: Notifies the failed run
     else Plan accepted
+        PJ->>RP: Encrypts the planned report to the maintainer keys before any upload
+        Note over PJ,RP: no key or a failed encryption stops the run here, server untouched
         PJ->>S: Uploads the build archive into the staging folder
         PJ->>S: Runs the swap script
         S->>S: Renames assets then pages into place, removes owned or approved files, writes the new record
-        PJ->>S: Checks front page, logo and removed addresses over HTTPS
-        PJ->>RP: Writes removed files, unknown files left in place, and the listing, encrypted
+        PJ->>S: Checks front page, logo, every removed and every reviewed starter address over HTTPS
+        PJ->>RP: Completes the report with removed files, unknown files left in place and the check result, encrypted
         alt Post-publish check fails
             PJ-->>GH: Fails the run, no rollback, next publish repairs
             GH-->>M: Notifies the failed run
@@ -394,10 +397,15 @@ sequenceDiagram
 Nothing runs at request time. The KTH web server serves static files from one shared folder.
 All logic runs on GitHub-hosted `ubuntu-latest` runners in `.github/workflows/publish.yaml`. A
 **check** job (every pull request and every push to `main`) runs lint, tests (including the
-readability, third-party and font-budget checks) and the build. A **deploy** job (push to `main`
-only, `needs: check`, environment `kth-server`, the existing `deploy-kth` concurrency group with
-no cancellation, so two publishes never overlap) runs `node deploy/publish.ts`. It replaces
-`appleboy/scp-action`. There is one instance of everything, no replicas and no scaling knobs.
+readability, third-party and font-budget checks) and the build. A **deploy** job (`main` only,
+via a push or a manual run; `needs: check`; environment `kth-server`; the existing `deploy-kth`
+concurrency group with no cancellation, so two publishes never overlap) runs
+`node deploy/publish.ts`. It replaces `appleboy/scp-action`. **The workflow-level concurrency rule
+must change too.** Today it sets `cancel-in-progress: true` for every ref, so a second merge
+cancels a running publish, possibly mid-swap. It becomes
+`cancel-in-progress: ${{ github.event_name == 'pull_request' }}`, which still cancels superseded
+pull-request checks but never a publish. There is one instance of everything, no replicas and no
+scaling knobs.
 
 **Server-folder layout after this feature** (`SSH_TARGET_DIR`):
 
@@ -451,7 +459,7 @@ no cancellation, so two publishes never overlap) runs `node deploy/publish.ts`. 
 | Error handling | Fail the build or stop the publish, never the visitor. Schema errors, dangling references, a failed readability pair or an off-site asset fail the **check** job, so the deploy job never runs. A failed publish guard stops the run before it changes the server. The only visitor-facing error is the static `404.html`. | `CLAUDE.md`; here; ADR-0002 |
 | Logging and disclosure | The public Actions log and job summary carry counts, check names and names that are already public (build paths, protected-list entries, navigation entries). Any name of a server file the site did not publish goes **only** into the encrypted report. If encryption fails, the publish stops before uploading. | ADR-0004 |
 | Authorization | Only a reviewed merge to `main` publishes. CODEOWNERS (maintainers) covers `deploy/` and `.github/`. The SSH secrets are usable only from `main` (environment `kth-server`). Pull-request checks run the planner on fixtures, with no server access. | ADR-0005 |
-| ID strategy | Content IDs stay file names (repo convention). Server files are identified by their path relative to the target folder, normalised: no leading `/`, no `..`, no control or newline characters. The planner stops on any path that breaks this rather than guessing. | `CLAUDE.md`; ADR-0002 |
+| ID strategy | Content IDs stay file names (repo convention). Server files are identified by their path relative to the target folder, normalised: no leading `/`, no `..`, no control or newline characters. The planner stops only when a path it would act on (a build, owned, approved or protected path) breaks this. A malformed name on an **unknown** file is reported in the encrypted report and never touched, so it never blocks a publish (spec §6.1, AC-13). | `CLAUDE.md`; ADR-0002 |
 | Remote command safety | `swap.sh` reads its rename and removal lists as NUL-separated input and never builds a shell command from a file name. The executor never interpolates server-side names into commands. | here |
 | Ownership | A server file is owned (in the publish record), approved (in `approved-removals.txt`), protected (in `protected.txt`) or unknown. Only owned or approved files missing from the build are removed. Protected and unknown files are never changed. | ADR-0002 |
 | Styling and identity | Tokens only. The palette and type derived from the unchanged logo live in `src/styles/tokens.css`. The text/background pairs the site uses are declared next to it in `contrast-pairs.ts`, and a test enforces ≥ 4.5:1 / ≥ 3:1. Restyling means editing tokens. | `CLAUDE.md`; repo ADR 0003 |
@@ -459,7 +467,7 @@ no cancellation, so two publishes never overlap) runs `node deploy/publish.ts`. 
 | Navigation | The ordered planned sections live in `src/data/sections.ts`. The header offers the ones whose page exists in `src/pages`, via `offeredSections()`. The publish summary warns about any planned entry whose page is missing from `dist/` (AC-04). | here |
 | Internationalisation | N/A. English only (idea-brief §5). | `CLAUDE.md` |
 | Observability | No runtime telemetry and no visitor data. Publish-time signals: run duration, swap duration, post-publish check and job-summary counts (§7). | §7 |
-| Events | One trigger: push to `main` (a merge) starts check, then deploy, serialised by the `deploy-kth` concurrency group. Nothing else is event-driven. | `.github/workflows/publish.yaml` |
+| Events | Two triggers publish, both only on `main`: a push (a merge) and a manual run (`workflow_dispatch`). Each starts check, then deploy, serialised by the `deploy-kth` concurrency group and never cancelled (§7). Pull requests run check only. Nothing else is event-driven. | `.github/workflows/publish.yaml` |
 
 ## 9. Architecture decisions
 
@@ -564,7 +572,7 @@ Each §1 quality goal expanded into a full scenario (numbers quoted verbatim fro
 | The maintainer loses their GPG private key, so the listing and reports become unreadable (ADR-0004). | Medium | Keep an offline backup of the key. A new key is a reviewed change to `deploy/maintainers/`. Deletion stays off while no maintainer can read the report. | pasichnyi |
 | The shared folder's disk quota may not hold a second copy of the site during staging (ADR-0003). | Low | The probe publish reports free space. The site is small (§7 thresholds). A failed unpack stops before the rename step, so the old version stays served. | pasichnyi |
 | A file someone else owns has an unusual name (newline, control character) that the listing parser cannot handle. | Low | The listing is NUL-separated. A malformed name on an **unknown** file is reported and never acted on. The planner stops only when a path it would act on (build, owned, approved or protected) is malformed (§8 ID strategy), so one stray file cannot block every publish. | pasichnyi |
-| Guards too tight: more than the spec §7 target of "≤ 1 per month" false-alarm stops. | Low | Count stops in the maintainer's publish notes. The routine limit and approvals are reviewed rule-file edits, not code changes. | pasichnyi |
+| Guards too tight: more than the spec §7 target of "≤ 1 per month" false-alarm stops. | Low | Count stops in the maintainer's publish notes. Loosen through the approved-removals list (a reviewed rule-file edit, no code change). The 20-file routine limit is a spec §6 number: changing it is a spec change first, and `removalLimit` in `settings.json` must equal the spec value. | pasichnyi |
 | KTH graphic profile may not allow the group's own palette and type (spec §8, due 2026-10-18). | Low | Styling is tokens only, so a forced change is a `tokens.css` edit, still gated by the contrast test (QG-3). | pasichnyi |
 | Rights holder after the licence file is removed (spec §8, due 2026-10-31). | Low | Not architectural. The default "all rights reserved, held by the group" needs no code. | pasichnyi |
 | Front-page copy not yet supplied (spec §8, due before `sdd:implement`). | Low | AC-15 cannot pass without it. `implement` treats the copy as an input, not something it invents. | pasichnyi |

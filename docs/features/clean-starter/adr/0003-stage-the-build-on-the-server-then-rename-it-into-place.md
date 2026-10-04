@@ -55,8 +55,9 @@ leaves the previous version fully served. The staging folder is wiped at the sta
 publish. An interruption inside the sub-second rename step can leave some pages new and some old.
 Every page still renders, because removals run last and old content-hashed assets stay until
 then. The previous record is still in place, so the next publish recomputes and repairs. A failed
-post-publish check (front page and logo reachable, sampled removed addresses not found) fails the
-run without automatic rollback.
+post-publish check (front page and logo reachable; every removed address and every reviewed
+starter address not found, per spec §6's "100% of the reviewed starter addresses") fails the run
+without automatic rollback.
 
 ## Consequences
 
