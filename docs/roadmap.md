@@ -19,14 +19,14 @@ A small English-only site with the research group's own identity is live at KTH,
 
 | # | Step | Source | Size | Status |
 |---|---|---|:---:|---|
-| 1 | Set the group's identity on the new skeleton (restyle logo and theme; skeleton itself comes from `/sdd:scaffold`) | idea-brief.md §1 Raw idea; §8 Open questions | M | idea |
+| 1 | Set the group's identity on the new skeleton (restyle logo and theme; skeleton itself comes from `/sdd:scaffold`); also removes the starter from the live server (cleanup half of step 8) and ships a minimal who-we-are front page (slice of step 2) | idea-brief.md §1 Raw idea; §8 Open questions | M | spec'd → [`features/clean-starter/`](features/clean-starter/) |
 | 2 | Front page "who we are" with equal paths to Research, People and Join/Contact | idea-brief.md §7 Recommendation | M | idea |
 | 3 | People pages: members and bios | idea-brief.md §7 Recommendation | M | idea |
 | 4 | Join / Contact page | idea-brief.md §7 Recommendation | S | idea |
 | 5 | Research themes as the site's spine → see [Not yet specified](#not-yet-specified) | idea-brief.md §7 Recommendation | fog | idea |
 | 6 | Projects pages grouped under each theme | idea-brief.md §7 Recommendation | M | idea |
 | 7 | Automatic publications import → see [Not yet specified](#not-yet-specified) | idea-brief.md §6 Risks | fog | idea |
-| 8 | Go live at KTH: confirm the existing SSH deploy to oden.abe.kth.se replaces the starter with the real site | idea-brief.md §6 Risks | S | idea |
+| 8 | Go live at KTH: confirm the existing SSH deploy to oden.abe.kth.se replaces the starter with the real site (starter removal now lives in step 1 / `clean-starter`; what remains is the final-domain check, D3) | idea-brief.md §6 Risks | S | idea |
 
 ## Not yet specified
 
