@@ -27,6 +27,21 @@ describe("astro build", () => {
   });
 });
 
+describe("not-found page", () => {
+  it("exists with noindex, the site header and a link to the front page", () => {
+    expect(existsSync("dist/404.html")).toBe(true);
+    const page = html("404.html");
+    expect(page).toMatch(/<meta name="robots" content="noindex"/);
+    expect(page).toContain("<header");
+    expect(page).toMatch(/<main[\s\S]*<a\s[^>]*href="\/"[\s\S]*<\/main>/);
+    expect(page).not.toContain('rel="canonical"');
+  });
+
+  it("states that the page does not exist", () => {
+    expect(html("404.html")).toMatch(/does not exist/i);
+  });
+});
+
 describe("header navigation", () => {
   it("links only to pages the build contains", () => {
     const files = new Set(builtFiles());
