@@ -51,12 +51,13 @@ A small English-only site with the research group's own identity is live at KTH,
 | D2 | Which source feeds publications, and is its data good enough? | research | agent | 7 |
 | D3 | Who owns the KTH virtual server, and is oden.abe.kth.se the final domain? | grilling | human | 8 |
 | D4 | Where does the first batch of real content (bios, photos) come from, given members must supply some? | grilling | human | 3 |
-| D5 | Keep, restyle or replace the existing logo and blue theme? | grilling | human | 1 |
+| D6 | Keep Hugo (with or without the HugoBlox theme) or switch to another static site generator? | grilling | human | 1 |
 
 ## Decisions so far
 
 - English-only, single maintainer, hosted at KTH, built around research themes → [`idea-brief.md §7`](idea-brief.md)
 - Blog, second language, member editing, internal area and full KTH branding are out → [`idea-brief.md §5`](idea-brief.md)
+- Logo and blue theme are restyled, not replaced (D5, 2026-10-04)
 - Hosting is oden.abe.kth.se via GitHub Actions SSH copy, all four secrets set; recon done → [`.github/workflows/publish.yaml`](../.github/workflows/publish.yaml), [`config/_default/hugo.yaml`](../config/_default/hugo.yaml)
 
 ## Dependency graph
@@ -75,7 +76,7 @@ flowchart LR
 
 ## Execution path
 
-Fog steps (5, 7) have no wave; their recon passes run alongside. Hosting recon is done, so step 1 is unblocked.
+Fog steps (5, 7) have no wave; their recon passes run alongside. Hosting recon is done; step 1 waits only on D6 (which generator to build on).
 
 | Wave | Steps | Zone per step (why parallel-safe) | Unlocks |
 |:---:|---|---|---|
