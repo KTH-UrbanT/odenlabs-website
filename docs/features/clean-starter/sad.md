@@ -326,23 +326,61 @@ C4Container
      📌 e.g. «author → web: composes draft → web → content API: save». Seed the primary flow(s) here;
      the `sequences` stage then covers every §5 AC (no cap). Never N/A for M+; XS/S keeps ≥1 happy-path flow. -->
 
-**Critical flow 1: <flow name>**
+Two seed flows. `/sdd:sequences` covers every remaining §5 AC: the deletion-off listing (AC-07,
+AC-07b), the readability block (AC-06), the missing-navigation-page warning (AC-04) and the
+non-maintainer proposal (AC-08).
+
+**Critical flow 1: a publish with deletion on (AC-01, AC-10–AC-13)**
 
 ```mermaid
 sequenceDiagram
-    actor Actor
-    participant Web
-    participant Service
-    participant Store
-    Actor->>Web: <action>
-    Web->>Service: <call>
-    Service->>Store: <write>
-    Store-->>Service: ok
-    Service-->>Web: result
-    Web-->>Actor: confirmation
+    actor M as Maintainer
+    participant GH as GitHub
+    participant PJ as Publish job
+    participant R as Publishing rules
+    participant S as KTH web server
+    participant RP as Encrypted publish report
+    M->>GH: Merges a reviewed change to main
+    GH->>PJ: Starts the publish with main-only SSH secrets
+    PJ->>R: Reads protected list, approved removals and deletion switch
+    PJ->>S: Lists the server folder and reads the previous publish record
+    S-->>PJ: Listing and record
+    PJ->>PJ: Plans from build files, listing, record and rules
+    alt A check fails before any change
+        Note over PJ: missing front page or logo, no matching record, protected clash, or removals above the limit without an exact approved list
+        PJ->>RP: Writes the failed check and the listing, encrypted
+        PJ-->>GH: Fails the run, server untouched
+        GH-->>M: Notifies the failed run
+    else Plan accepted
+        PJ->>S: Uploads the build archive into the staging folder
+        PJ->>S: Runs the swap script
+        S->>S: Renames assets then pages into place, removes owned or approved files, writes the new record
+        PJ->>S: Checks front page, logo and removed addresses over HTTPS
+        PJ->>RP: Writes removed files, unknown files left in place, and the listing, encrypted
+        alt Post-publish check fails
+            PJ-->>GH: Fails the run, no rollback, next publish repairs
+            GH-->>M: Notifies the failed run
+        else Check passes
+            PJ-->>GH: Public summary with counts only
+        end
+    end
 ```
 
-**Critical flow 2: <e.g. async event propagation>** — <if applicable, otherwise N/A>.
+**Critical flow 2: a visitor opens an address the site does not have (AC-02, AC-10)**
+
+```mermaid
+sequenceDiagram
+    actor V as Visitor
+    participant S as KTH web server
+    participant SITE as Static site
+    V->>S: Opens an old starter address, a removed page or a typo
+    S->>SITE: Looks for the file among the published files
+    alt File is published
+        SITE-->>V: The page, with navigation of offered sections
+    else No such file
+        SITE-->>V: Not-found status with the site's own 404 page, navigation and link home
+    end
+```
 
 ## 7. Deployment view
 
