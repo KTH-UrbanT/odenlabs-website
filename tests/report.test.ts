@@ -89,6 +89,12 @@ describe("maintainerKeyFiles", () => {
     writeFileSync(join(dir, "README.md"), "not a key");
     expect(maintainerKeyFiles(dir)).toEqual([join(dir, "jane-doe.asc")]);
   });
+
+  it("finds no key when the folder is missing", () => {
+    expect(maintainerKeyFiles(join(tmpdir(), "no-such-keys-folder"))).toEqual(
+      [],
+    );
+  });
 });
 
 describe("encryptReport", () => {

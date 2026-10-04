@@ -3,7 +3,7 @@
 // names server files the site did not publish, leaves the runner only
 // GPG-encrypted to every maintainer key in deploy/maintainers/.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Deletion, EntryKind, FailedCheck, ReportEntry } from "./plan.ts";
@@ -110,6 +110,7 @@ export function formatReport(report: PublishReport): string {
 
 /** The maintainers' public keys: every `.asc` file in the folder. */
 export function maintainerKeyFiles(dir: string): string[] {
+  if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((name) => name.endsWith(".asc"))
     .sort()
