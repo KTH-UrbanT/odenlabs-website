@@ -592,6 +592,21 @@ Each §1 quality goal expanded into a full scenario (numbers quoted verbatim fro
 
 | Term | Meaning |
 |---|---|
-| <e.g. domain object A> | <its meaning in this domain> |
-| <e.g. domain object B> | <its meaning> |
-| <e.g. domain invariant name> | <the rule, in plain language> |
+| maintainer | Any person with rights to merge changes that publish to the live site. Not a group member and not KTH IT (root `CONTEXT.md`). |
+| visitor | Anyone who reads the public site in a browser. Not a group member (root `CONTEXT.md`). |
+| protected file | A file in the server folder that the site does not build but that must survive every publish. A maintainer names each one in `deploy/rules/protected.txt` (feature `CONTEXT.md`). |
+| section | A top-level area of the site with its own page, offered in the main navigation from the ordered list of planned sections (feature `CONTEXT.md`). |
+| starter | The template site from the first attempt: demo pages, generated files, template notices. Not the group's own logo, icon or colours (feature `CONTEXT.md`). |
+| publish record ⚑ | `.publish-record.json` in the target folder. It lists every path the last publish uploaded, with its hash, and defines which server files the site owns (ADR-0002). |
+| owned file ⚑ | A server file listed in the previous publish record. It may be removed when it is no longer in the build. |
+| unknown file ⚑ | A server file that is neither owned, approved nor protected. It is never changed and is reported on every publish (AC-13). |
+| approved removal ⚑ | A server file a maintainer listed in `deploy/rules/approved-removals.txt`. Above the routine removal limit, the list must equal the planned removals exactly (AC-12). |
+| deletion switch ⚑ | `deletion` in `deploy/rules/settings.json`. Off means a publish uploads and lists only; on means it may remove owned or approved files. It starts off. |
+| routine removal limit ⚑ | The most files a publish may remove without an exactly matching approved list: 20 (spec §6). |
+| staging folder ⚑ | `.publish-staging/` inside the target folder, where the build is unpacked before being renamed into place (ADR-0003). |
+| publish report ⚑ | The maintainer-only outcome of one publish (uploaded, removed, unknown, failed check, warnings), delivered GPG-encrypted (ADR-0004). The public job summary carries only its counts. |
+| server listing ⚑ | The part of the publish report naming every server-folder file the build does not contain (AC-07). |
+| offered section ⚑ | A planned section whose page exists in the build, and so appears in the navigation (AC-03). |
+
+⚑ = a domain term surfaced during design and not yet in `CONTEXT.md`. Add it with
+`/sdd:glossary clean-starter` before the terms drift.
