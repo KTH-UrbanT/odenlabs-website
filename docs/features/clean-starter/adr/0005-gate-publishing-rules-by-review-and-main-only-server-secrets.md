@@ -71,6 +71,14 @@ The planner rejects unknown keys and malformed paths, which fails the check befo
 - Adding required reviewers on the `kth-server` environment later (a manual go per publish) is a
   settings change, if publishing should ever need a second human gate.
 
+## Notes
+
+- **2026-10-04 (review, T19/T26):** the decision stands; its CODEOWNERS scope is widened. Code
+  owners now cover every file the deploy step loads while `SSH_PRIVATE_KEY` is in its
+  environment, not only `deploy/` and `.github/`. Today that adds `src/data/sections.ts` and
+  `src/lib/navigation.ts`. `tests/workflow.test.ts` walks the imports from `deploy/publish.ts`
+  and fails when a loaded file has no code owner.
+
 ## Links
 
 - Spec: [[../spec.md]] AC-08, §6.1

@@ -189,7 +189,8 @@ removed even if a stale record or an approval also names it (AC-11).
 |---|---|---|---|
 | protected | yes | stop: `protected-clash` (AC-11b) | stop: `protected-clash` (AC-11b) |
 | protected | no | leave unchanged | leave unchanged (AC-11) |
-| owned / approved | yes | overwrite with the build file | overwrite with the build file |
+| owned | yes | overwrite with the build file | overwrite with the build file |
+| approved | yes | stop: `approved-in-build` | stop: `approved-in-build` |
 | owned / approved | no | list for review, keep | remove (AC-10, AC-01) |
 | unknown | no | list for review, keep | keep, report (AC-13) |
 | unknown | yes | overwrite; it becomes owned | overwrite; it becomes owned |
@@ -199,6 +200,13 @@ decided as **overwrite**, which is what today's upload-only publish does. The re
 path as `uploaded` and, for that one publish, also as a `warning` ("replaced a file the site
 never published"), so the maintainer sees it. It is not a stop, so it cannot trip the
 false-alarm KPI (spec §7). Decided by the maintainer on 2026-10-04 during `tasks`.
+
+**Layout clash** (AC-13b, review 2026-10-04): the table compares exact paths. Any listed path
+(protected, owned or unknown) that is a strict parent or child of a build path, for example a
+listed file `x/y` when the build writes a file `x`, stops the publish with `layout-clash` before
+any change, whatever the deletion setting. The swap script repeats the check on the server and
+also refuses a folder at a build file's address or a link on the way to one. The file in the way
+is never touched.
 
 ### `PROTECTED_ENTRY` — a line of `deploy/rules/protected.txt`
 
@@ -266,7 +274,8 @@ stops before any upload (ADR-0004, Flow 5).
 
 `FailedCheck` is a closed set: `missing-front-page`, `missing-logo`, `no-previous-record`,
 `record-without-front-page-or-logo`, `removal-limit`, `protected-clash`, `malformed-path`,
-`no-maintainer-key`, `encryption-failed`, `remote-tools-missing`, `layout-clash`, `listing-failed`,
+`no-maintainer-key`, `encryption-failed`, `remote-tools-missing`, `layout-clash` (a listed path is a
+strict parent or child of a build path, or a link is on the way; AC-13b), `listing-failed`,
 `upload-failed`, `swap-failed`, `approved-in-build` (an approved removal path is also a build path;
 stops whatever the deletion setting is), `post-publish-check`. The
 **public** job summary carries only these names and counts per `ReportEntry.kind` (sad §8

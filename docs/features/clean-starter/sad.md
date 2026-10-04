@@ -224,7 +224,8 @@ C4Context
 5. **Publishing rules are reviewed files, and the server key is usable only from `main`**
    ([ADR-0005](adr/0005-gate-publishing-rules-by-review-and-main-only-server-secrets.md)). The
    protected list, the approved removals and the deletion switch are files under `deploy/rules/`
-   that reach `main` only through a reviewed pull request (CODEOWNERS = maintainers). The SSH
+   that reach `main` only through a reviewed pull request (CODEOWNERS = maintainers, over every
+   file the deploy step loads while the server key is in its environment). The SSH
    secrets live in a GitHub environment that only `main` may use, so no pull-request run can
    reach the server (AC-08, spec §6.1).
 
@@ -285,7 +286,7 @@ tests/
 └── build.test.ts                                 # smoke + 404 present + 0 off-site refs + font budget
 .github/
 ├── workflows/publish.yaml             # check job (all PRs + main); deploy job (main, environment kth-server)
-└── CODEOWNERS                         # maintainers own deploy/ and .github/ (ADR-0005)
+└── CODEOWNERS                         # maintainers own every file the deploy step loads with the key set (ADR-0005)
 ```
 
 **C4 Container (L2):** <!-- syntax → references/c4-mermaid-syntax.md. Real names, no <placeholder> stubs. ONE Container per declared target_surface (frontmatter); the web container below is one example surface. -->
@@ -348,7 +349,7 @@ sequenceDiagram
     S-->>PJ: Listing and record
     PJ->>PJ: Plans from build files, listing, record and rules
     alt A check fails before any change
-        Note over PJ: missing front page or logo, no matching record, protected clash, or removals above the limit without an exact approved list
+        Note over PJ: missing front page or logo, no matching record, protected clash, layout clash (AC-13b), or removals above the limit without an exact approved list
         PJ->>RP: Writes the failed check and the listing, encrypted
         PJ-->>GH: Fails the run, server untouched
         GH-->>M: Notifies the failed run
@@ -357,14 +358,21 @@ sequenceDiagram
         Note over PJ,RP: no key or a failed encryption stops the run here, server untouched
         PJ->>S: Uploads the build archive into the staging folder
         PJ->>S: Runs the swap script
-        S->>S: Renames assets then pages into place, removes owned or approved files, writes the new record
-        PJ->>S: Checks front page, logo, every removed and every reviewed starter address over HTTPS
-        PJ->>RP: Completes the report with removed files, unknown files left in place and the check result, encrypted
-        alt Post-publish check fails
-            PJ-->>GH: Fails the run, no rollback, next publish repairs
+        alt Upload or swap fails
+            Note over PJ,S: failed-before-swap: upload or a swap pre-check failed, live files untouched, staging discarded. failed-during-swap: the renames began and failed
+            PJ->>RP: Re-seals the report with the named outcome and failed check, encrypted
+            PJ-->>GH: Fails the run with a public summary of counts only, no rollback
             GH-->>M: Notifies the failed run
-        else Check passes
-            PJ-->>GH: Public summary with counts only
+        else Swap completes
+            S->>S: Renames assets then pages into place, removes owned or approved files, writes the new record
+            PJ->>S: Checks front page, logo, every removed and every reviewed starter address over HTTPS
+            PJ->>RP: Completes the report with removed files, unknown files left in place and the check result, encrypted
+            alt Post-publish check fails
+                PJ-->>GH: Fails the run, no rollback, next publish repairs
+                GH-->>M: Notifies the failed run
+            else Check passes
+                PJ-->>GH: Public summary with counts only
+            end
         end
     end
 ```
@@ -481,7 +489,7 @@ sequenceDiagram
     PJ->>PJ: Checks idempotency by planning from the record, so a re-run of the same commit adds no new change
     PJ->>PJ: Plans upload only with zero removals
     PJ->>PJ: Sorts every folder file the build lacks into protected, approved or unknown
-    alt A build file sits at a protected file's address
+    alt A build file sits at a protected file's address, or a listed file is in the way of an address the build needs (AC-13b)
         PJ->>RP: Writes the failed check and the listing, encrypted
         PJ-->>GH: Fails the run, server untouched
         GH-->>M: Notifies the failed run
@@ -493,6 +501,7 @@ sequenceDiagram
         else Listing encrypted
             PJ->>SF: Uploads the build archive into the staging folder
             PJ->>SF: Runs the swap script with an empty removal list
+            Note over PJ,RP: upload or swap fails: same branch as Flow 1, the report is re-sealed with failed-before-swap or failed-during-swap and the public summary carries counts only
             SF->>SF: Renames assets then pages into place and writes the new record
             Note over PJ,SF: persists publish record (every uploaded path with its hash)
             PJ->>SF: Checks the front page and logo over HTTPS
@@ -635,6 +644,7 @@ sequenceDiagram
 | AC-11b | Flow 1 "A check fails before any change" branch, and Flow 5 protected-address branch |
 | AC-12 | Flow 1, "A check fails before any change" branch |
 | AC-13 | Flow 1 report completion and Flow 5 listing sort (unknown files left in place and reported) |
+| AC-13b | Flow 1 "A check fails before any change" branch (layout clash), and Flow 5 first branch |
 | AC-14 | N/A: a property of the repository's files, checked at review, not a runtime flow |
 | AC-15 | (pending T5) Flow 8, front-page content |
 
@@ -726,8 +736,8 @@ scaling knobs.
 |---|---|---|
 | Error handling | Fail the build or stop the publish, never the visitor. Schema errors, dangling references, a failed readability pair or an off-site asset fail the **check** job, so the deploy job never runs. A failed publish guard stops the run before it changes the server. The only visitor-facing error is the static `404.html`. | `CLAUDE.md`; here; ADR-0002 |
 | Logging and disclosure | The public Actions log and job summary carry counts, check names and names that are already public (build paths, protected-list entries, navigation entries). Any name of a server file the site did not publish goes **only** into the encrypted report. If encryption fails, the publish stops before uploading. | ADR-0004 |
-| Authorization | Only a reviewed merge to `main` publishes. CODEOWNERS (maintainers) covers `deploy/` and `.github/`. The SSH secrets are usable only from `main` (environment `kth-server`). Pull-request checks run the planner on fixtures, with no server access. | ADR-0005 |
-| ID strategy | Content IDs stay file names (repo convention). Server files are identified by their path relative to the target folder, normalised: no leading `/`, no `..`, no control or newline characters. The planner stops only when a path it would act on (a build, owned, approved or protected path) breaks this. A malformed name on an **unknown** file is reported in the encrypted report and never touched, so it never blocks a publish (spec §6.1, AC-13). | `CLAUDE.md`; ADR-0002 |
+| Authorization | Only a reviewed merge to `main` publishes. CODEOWNERS (maintainers) covers every file the deploy step loads while `SSH_PRIVATE_KEY` is in its environment: `deploy/`, `.github/` and the site files `deploy/publish.ts` imports (`src/data/sections.ts`, `src/lib/navigation.ts`). `tests/workflow.test.ts` walks the imports and fails when a loaded file has no code owner, so a new import must add its file to CODEOWNERS. The SSH secrets are usable only from `main` (environment `kth-server`). Pull-request checks run the planner on fixtures, with no server access. | ADR-0005 |
+| ID strategy | Content IDs stay file names (repo convention). Server files are identified by their path relative to the target folder, normalised: no leading `/`, no `..`, no control or newline characters. The planner stops only when a path it would act on (a build, owned, approved or protected path) breaks this. A malformed name on an **unknown** file is reported in the encrypted report and never touched, so it never blocks a publish (spec §6.1, AC-13). The one exception is a file in the way of an address the build needs: the publish stops with `layout-clash` and leaves it untouched (AC-13b). | `CLAUDE.md`; ADR-0002 |
 | Remote command safety | `swap.sh` reads its rename and removal lists as NUL-separated input and never builds a shell command from a file name. The executor never interpolates server-side names into commands. | here |
 | Ownership | A server file is owned (in the publish record), approved (in `approved-removals.txt`), protected (in `protected.txt`) or unknown. Only owned or approved files missing from the build are removed. Protected and unknown files are never changed. | ADR-0002 |
 | Styling and identity | Tokens only. The palette and type derived from the unchanged logo live in `src/styles/tokens.css`. The text/background pairs the site uses are declared next to it in `contrast-pairs.ts`, and a test enforces ≥ 4.5:1 / ≥ 3:1. Restyling means editing tokens. | `CLAUDE.md`; repo ADR 0003 |
@@ -875,7 +885,7 @@ Each §1 quality goal expanded into a full scenario (numbers quoted verbatim fro
 | starter | The template site from the first attempt: demo pages, generated files, template notices. Not the group's own logo, icon or colours (feature `CONTEXT.md`). |
 | publish record ⚑ | `.publish-record.json` in the target folder. It lists every path the last publish uploaded, with its hash, and defines which server files the site owns (ADR-0002). |
 | owned file ⚑ | A server file listed in the previous publish record. It may be removed when it is no longer in the build. |
-| unknown file ⚑ | A server file that is neither owned, approved nor protected. It is never changed and is reported on every publish (AC-13). |
+| unknown file ⚑ | A server file that is neither owned, approved nor protected. It is never changed and is reported on every publish (AC-13). If it is in the way of an address the build needs, the publish stops instead (AC-13b). |
 | approved removal ⚑ | A server file a maintainer listed in `deploy/rules/approved-removals.txt`. Above the routine removal limit, the list must equal the planned removals exactly (AC-12). |
 | deletion switch ⚑ | `deletion` in `deploy/rules/settings.json`. Off means a publish uploads and lists only; on means it may remove owned or approved files. It starts off. |
 | routine removal limit ⚑ | The most files a publish may remove without an exactly matching approved list: 20 (spec §6). |

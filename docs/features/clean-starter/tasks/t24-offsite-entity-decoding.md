@@ -7,7 +7,7 @@ acs: []
 files_hint: ["src/lib/offsite-requests.ts", "tests/offsite-requests.test.ts"]
 owner: "pasichnyi"
 source: "review-2026-10-04-2 R-01"
-status: "todo"
+status: "done"
 ---
 
 <!-- To the executing agent: work from what is inlined here. If a slice is insufficient,
@@ -25,11 +25,11 @@ Astro writes the quotes inside a `style` attribute as `&quot;`, so the built pag
 
 ## Checklist
 
-- [ ] Decode HTML entities in attribute values and inline style text before matching (at least `&quot;`, `&#34;`, `&#39;`, `&apos;`, `&amp;`).
-- [ ] Unit test in `tests/offsite-requests.test.ts` with the exact string Astro emits (above); it must be reported.
-- [ ] Unit test that an entity-encoded own-host or relative `url()` is not reported.
+- [x] Decode HTML entities in attribute values and inline style text before matching (at least `&quot;`, `&#34;`, `&#39;`, `&apos;`, `&amp;`).
+- [x] Unit test in `tests/offsite-requests.test.ts` with the exact string Astro emits (above); it must be reported.
+- [x] Unit test that an entity-encoded own-host or relative `url()` is not reported.
 
 ## Definition of Done
 
-- [ ] a unit case with Astro's exact `url(&quot;https://…&quot;)` output is reported; current build still passes
-- [ ] `npm run lint && npm test` clean
+- [x] a unit case with Astro's exact `url(&quot;https://…&quot;)` output is reported; current build still passes
+- [x] `npm run lint && npm test` clean

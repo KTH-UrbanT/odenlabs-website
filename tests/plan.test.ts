@@ -482,7 +482,7 @@ describe("planPublish: stop-guards (AC-11b, AC-12)", () => {
     );
 
     it.each(["protected", "unknown", "owned"] as const)(
-      "stops when a %s listed file sits where the build needs a folder",
+      "stops when a %s listed file sits where the build needs a folder (AC-11b, AC-13b)",
       (kind) => {
         const result = stop({
           deletion: "on",
