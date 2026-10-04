@@ -76,8 +76,10 @@ export function parseRuleList(text: string, fileName: string): string[] {
     const where = `${fileName}:${i + 1}`;
     const path = normalisePath(line);
     if (/[*?[\]]/.test(line)) problems.push(`${where}: glob not allowed`);
-    else if (path === null) problems.push(`${where}: malformed path`);
-    else if (paths.includes(path)) problems.push(`${where}: duplicate ${path}`);
+    else if (path === null || line !== line.trim()) {
+      problems.push(`${where}: malformed path`);
+    } else if (paths.includes(path))
+      problems.push(`${where}: duplicate ${path}`);
     else paths.push(path);
   });
   if (problems.length > 0) throw new Error(problems.join("\n"));
@@ -136,50 +138,66 @@ export function parseRules(files: {
 
 // --- Publish record ---------------------------------------------------------
 
+export type RecordProblem = "absent" | "unreadable" | "malformed-path";
+
 /**
- * The previous publish record, or null when there is none or it cannot be
- * trusted (invalid JSON, unknown version, a field breaking its constraints):
- * an unreadable record counts as no matching record (AC-12).
+ * Reads the previous publish record and says why it cannot be used: absent
+ * (no file), unreadable (invalid JSON, unknown version, a field breaking its
+ * constraints) or malformed-path (a listed path breaks the path rule). An
+ * unreadable record counts as no matching record (AC-12).
  */
-export function parseRecord(text: string | null): PublishRecord | null {
-  if (text === null) return null;
+export function inspectRecord(text: string | null): {
+  record: PublishRecord | null;
+  problem: RecordProblem | null;
+} {
+  const none = (problem: RecordProblem) => ({ record: null, problem });
+  if (text === null) return none("absent");
   let value: unknown;
   try {
     value = JSON.parse(text);
   } catch {
-    return null;
+    return none("unreadable");
   }
   const r = value as Partial<PublishRecord> | null;
-  if (typeof r !== "object" || r === null) return null;
-  if (r.version !== 1) return null;
+  if (typeof r !== "object" || r === null) return none("unreadable");
+  if (r.version !== 1) return none("unreadable");
   if (typeof r.commit !== "string" || !/^[0-9a-f]{40}$/.test(r.commit)) {
-    return null;
+    return none("unreadable");
   }
   if (
     typeof r.publishedAt !== "string" ||
     !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z$/.test(r.publishedAt)
   ) {
-    return null;
+    return none("unreadable");
   }
-  if (!Array.isArray(r.files) || r.files.length === 0) return null;
+  if (!Array.isArray(r.files) || r.files.length === 0) {
+    return none("unreadable");
+  }
   const seen = new Set<string>();
   for (const f of r.files) {
-    if (typeof f !== "object" || f === null) return null;
-    if (typeof f.path !== "string" || normalisePath(f.path) !== f.path) {
-      return null;
-    }
+    if (typeof f !== "object" || f === null) return none("unreadable");
+    if (typeof f.path !== "string") return none("unreadable");
+    if (normalisePath(f.path) !== f.path) return none("malformed-path");
     if (typeof f.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(f.sha256)) {
-      return null;
+      return none("unreadable");
     }
-    if (seen.has(f.path)) return null;
+    if (seen.has(f.path)) return none("unreadable");
     seen.add(f.path);
   }
   return {
-    version: 1,
-    commit: r.commit,
-    publishedAt: r.publishedAt,
-    files: r.files.map((f) => ({ path: f.path, sha256: f.sha256 })),
+    record: {
+      version: 1,
+      commit: r.commit,
+      publishedAt: r.publishedAt,
+      files: r.files.map((f) => ({ path: f.path, sha256: f.sha256 })),
+    },
+    problem: null,
   };
+}
+
+/** The previous publish record, or null when there is none or it is unusable. */
+export function parseRecord(text: string | null): PublishRecord | null {
+  return inspectRecord(text).record;
 }
 
 // --- Planning ---------------------------------------------------------------
@@ -208,6 +226,11 @@ export type FailedCheck =
   | "record-without-front-page-or-logo"
   | "removal-limit"
   | "protected-clash"
+  | "layout-clash"
+  | "approved-in-build"
+  | "listing-failed"
+  | "upload-failed"
+  | "swap-failed"
   | "malformed-path"
   | "no-maintainer-key"
   | "encryption-failed"
@@ -221,11 +244,20 @@ export interface PlanInput {
   listing: string[];
   /** The previous publish record, or null (none or unreadable). */
   record: PublishRecord | null;
+  /** Why `record` is null, when known (see inspectRecord). */
+  recordProblem?: RecordProblem | null;
   rules: Rules;
 }
 
 export type PlanResult =
-  | { ok: true; upload: string[]; remove: string[]; entries: ReportEntry[] }
+  | {
+      ok: true;
+      upload: string[];
+      remove: string[];
+      /** Owned files left on the server, kept in the new record. */
+      carry: RecordedFile[];
+      entries: ReportEntry[];
+    }
   | {
       ok: false;
       failedCheck: FailedCheck;
@@ -255,6 +287,7 @@ const REPLACED_UNKNOWN = "replaced a file the site never published";
 interface Sorted {
   upload: string[];
   remove: string[];
+  carry: RecordedFile[];
   entries: ReportEntry[];
   /** Normalised paths present in the target folder. */
   present: Set<string>;
@@ -270,6 +303,7 @@ function sortListing(input: PlanInput, deletionOn: boolean): Sorted {
     path,
   }));
   const remove: string[] = [];
+  const carry: RecordedFile[] = [];
   const present = new Set<string>();
 
   for (const raw of input.listing) {
@@ -298,6 +332,8 @@ function sortListing(input: PlanInput, deletionOn: boolean): Sorted {
       entries.push({ kind: "removed", path });
     } else {
       entries.push({ kind: `${ownership}-pending`, path });
+      const owned = record?.files.find((f) => f.path === path);
+      if (ownership === "owned" && owned) carry.push(owned);
     }
   }
   for (const path of rules.approved) {
@@ -309,7 +345,24 @@ function sortListing(input: PlanInput, deletionOn: boolean): Sorted {
       });
     }
   }
-  return { upload: build, remove: remove.sort(), entries, present };
+  carry.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return { upload: build, remove: remove.sort(), carry, entries, present };
+}
+
+/**
+ * A build path and a listed path where one is a strict parent folder of the
+ * other: the swap would write into a folder, or need a folder where a file is.
+ */
+function findLayoutClash(build: string[], listing: string[]): string | null {
+  const listed = listing
+    .map(normalisePath)
+    .filter((p): p is string => p !== null && !isOutsideListing(p));
+  for (const b of build) {
+    for (const l of listed) {
+      if (l.startsWith(`${b}/`) || b.startsWith(`${l}/`)) return `${b} / ${l}`;
+    }
+  }
+  return null;
 }
 
 /** The first guard that fails (AC-11b, AC-12), or null. */
@@ -338,8 +391,28 @@ function firstFailedCheck(
       detail: `build file at a protected address: ${clashes.join(", ")}`,
     };
   }
+  const approvedInBuild = build.filter((p) => rules.approved.includes(p));
+  if (approvedInBuild.length > 0) {
+    return {
+      failedCheck: "approved-in-build",
+      detail: `approved for removal but also in the build: ${approvedInBuild.join(", ")}`,
+    };
+  }
+  const layout = findLayoutClash(build, input.listing);
+  if (layout !== null) {
+    return {
+      failedCheck: "layout-clash",
+      detail: `build path and server path overlap as folder and file: ${layout}`,
+    };
+  }
   if (rules.settings.deletion === "off") return null;
 
+  if (record === null && input.recordProblem === "malformed-path") {
+    return {
+      failedCheck: "malformed-path",
+      detail: "previous record lists a malformed path",
+    };
+  }
   if (record === null) {
     return {
       failedCheck: "no-previous-record",
@@ -367,9 +440,18 @@ function firstFailedCheck(
       approved.length === sorted.remove.length &&
       approved.every((p, i) => p === sorted.remove[i]);
     if (!exact) {
+      const plannedNotApproved = sorted.remove.filter(
+        (p) => !rules.approved.includes(p),
+      );
+      const approvedNotPlanned = rules.approved
+        .filter((p) => !sorted.remove.includes(p))
+        .sort();
       return {
         failedCheck: "removal-limit",
-        detail: `${sorted.remove.length} removals exceed the routine limit of ${limit} and differ from the approved list`,
+        detail:
+          `${sorted.remove.length} removals exceed the routine limit of ${limit} and differ from the approved list; ` +
+          `planned, not approved: ${plannedNotApproved.join(", ") || "none"}; ` +
+          `approved, not planned: ${approvedNotPlanned.join(", ") || "none"}`,
       };
     }
   }
@@ -396,6 +478,7 @@ export function planPublish(input: PlanInput): PlanResult {
     ok: true,
     upload: sorted.upload,
     remove: sorted.remove,
+    carry: sorted.carry,
     entries: sorted.entries.sort(byPath),
   };
 }

@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  readlinkSync,
   statSync,
   symlinkSync,
   utimesSync,
@@ -35,7 +36,9 @@ function snapshot(): Map<string, { bytes: string; mtime: number }> {
       const full = join(dir, entry.name);
       const rel = relative(target, full);
       if (rel === STAGE) continue;
-      if (entry.isDirectory()) walk(full);
+      if (entry.isSymbolicLink())
+        files.set(rel, { bytes: `-> ${readlinkSync(full)}`, mtime: 0 });
+      else if (entry.isDirectory()) walk(full);
       else
         files.set(rel, {
           bytes: readFileSync(full, "latin1"),
@@ -111,7 +114,7 @@ describe("swap.sh", () => {
 
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/swap-seconds=\d/);
+    expect(result.stdout).toMatch(/swap-seconds=\d+\.\d{3}\n$/);
     const after = snapshot();
     expect(after.get("index.html")?.bytes).toBe("new front page");
     expect(after.get("_astro/site.abc.css")?.bytes).toBe("body{}");
@@ -164,5 +167,57 @@ describe("swap.sh", () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toMatch(/remote-tools-missing: find/);
     expect(snapshot()).toEqual(before);
+  });
+
+  it("refuses a folder at a file address without touching protected files", () => {
+    put("x/x", "protected inside a folder");
+    stage({ x: "new file named like the folder" }, []);
+    const before = snapshot();
+
+    const result = swap();
+
+    expect(result.status).toBe(5);
+    expect(result.stderr).toMatch(/layout-clash/);
+    expect(snapshot()).toEqual(before);
+  });
+
+  it("refuses a symlinked parent and writes nothing outside the site folder", () => {
+    const outside = mkdtempSync(join(tmpdir(), "outside-"));
+    symlinkSync(outside, join(target, "_astro"));
+    stage({ "_astro/a.css": "body{}", "index.html": "new" }, []);
+    const before = snapshot();
+
+    const result = swap();
+
+    expect(result.status).toBe(5);
+    expect(result.stderr).toMatch(/layout-clash/);
+    expect(readdirSync(outside)).toEqual([]);
+    expect(snapshot()).toEqual(before);
+  });
+
+  it("refuses a file where the build needs a folder before any rename", () => {
+    put("a", "a file");
+    stage({ "index.html": "new", "a/b.html": "needs folder a" }, []);
+    const before = snapshot();
+
+    const result = swap();
+
+    expect(result.status).toBe(5);
+    expect(result.stderr).toMatch(/layout-clash/);
+    expect(snapshot()).toEqual(before);
+  });
+
+  it("prints the swap time with a decimal point whatever the locale", () => {
+    const probe = spawnSync("awk", ['BEGIN { printf "%.1f", 1.5 }'], {
+      encoding: "utf8",
+      env: { ...process.env, LC_ALL: "sv_SE.UTF-8" },
+    });
+    if (probe.stdout !== "1,5") return; // no comma-decimal locale here
+    stage({ "index.html": "new" }, []);
+
+    const result = swap({ ...process.env, LC_ALL: "sv_SE.UTF-8" });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/swap-seconds=\d+\.\d{3}\n$/);
   });
 });

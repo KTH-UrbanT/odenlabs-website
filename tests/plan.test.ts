@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   RECORD_FILE,
   STAGING_DIR,
+  inspectRecord,
   isOutsideListing,
   normalisePath,
   parseRecord,
@@ -75,6 +76,15 @@ describe("parseRuleList", () => {
       parseRuleList("post/*.html\n", "approved-removals.txt"),
     ).toThrow(/approved-removals\.txt:1.*glob/);
   });
+
+  it.each([[".htaccess \n"], [" .htaccess\n"], [".htaccess\t\n"]])(
+    "rejects a line with leading or trailing whitespace as malformed: %j",
+    (text) => {
+      expect(() => parseRuleList(text, "protected.txt")).toThrow(
+        /protected\.txt:1.*malformed/,
+      );
+    },
+  );
 });
 
 describe("parseSettings", () => {
@@ -125,6 +135,36 @@ describe("parseRules", () => {
       settingsText: readFileSync(`${dir}/settings.json`, "utf8"),
     });
     expect(parsed.settings.removalLimit).toBe(20);
+  });
+});
+
+describe("inspectRecord", () => {
+  const valid = publishRecord();
+
+  it("returns the record and no problem for a valid record", () => {
+    expect(inspectRecord(JSON.stringify(valid))).toEqual({
+      record: valid,
+      problem: null,
+    });
+  });
+
+  it("reports an absent record", () => {
+    expect(inspectRecord(null)).toEqual({ record: null, problem: "absent" });
+  });
+
+  it("reports an unreadable record", () => {
+    expect(inspectRecord("{")).toEqual({ record: null, problem: "unreadable" });
+  });
+
+  it("reports a malformed path as its own problem", () => {
+    const text = JSON.stringify({
+      ...valid,
+      files: [{ path: "../a.html", sha256: "0".repeat(64) }],
+    });
+    expect(inspectRecord(text)).toEqual({
+      record: null,
+      problem: "malformed-path",
+    });
   });
 });
 
@@ -309,6 +349,65 @@ describe("planPublish: classification and plan", () => {
     });
   });
 
+  describe("carried owned files (F-07)", () => {
+    const old = "old.html";
+    const oldSha = "a".repeat(64);
+    const record = () => {
+      const r = publishRecord({ paths: [...build, old, "gone.html"] });
+      r.files = r.files.map((f) =>
+        f.path === old ? { ...f, sha256: oldSha } : f,
+      );
+      return r;
+    };
+
+    it("carries an owned file the build dropped, with its previous hash, when deletion is off", () => {
+      const result = plan({
+        deletion: "off",
+        listing: [...build, old, RECORD_FILE],
+        record: record(),
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.carry).toEqual([{ path: old, sha256: oldSha }]);
+      }
+    });
+
+    it("drops owned files that are no longer on the server", () => {
+      const result = plan({
+        deletion: "off",
+        listing: [...build, old, RECORD_FILE],
+        record: record(),
+      });
+      if (result.ok) {
+        expect(result.carry.map((f) => f.path)).not.toContain("gone.html");
+      }
+    });
+
+    it("carries nothing when deletion is on (the files are removed)", () => {
+      const result = plan({
+        deletion: "on",
+        listing: [...build, old, RECORD_FILE],
+        record: record(),
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.carry).toEqual([]);
+        expect(result.remove).toEqual([old]);
+      }
+    });
+
+    it("does not carry files that are in the build or protected", () => {
+      const result = plan({
+        deletion: "off",
+        listing: [...build, old, RECORD_FILE],
+        record: record(),
+        protected: [old],
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.carry).toEqual([]);
+    });
+  });
+
   it("overwrites an unknown file at a build address and warns about it", () => {
     const result = plan({
       listing: [...build, RECORD_FILE],
@@ -365,6 +464,76 @@ describe("planPublish: stop-guards (AC-11b, AC-12)", () => {
     (deletion) => {
       const result = stop({ deletion, protected: ["icon.png"] });
       expectStop(result, "protected-clash");
+      if (!result.ok) expect(result.detail).toContain("icon.png");
+    },
+  );
+
+  describe("layout clashes between a build path and a listed path (F-01)", () => {
+    it.each(["off", "on"] as const)(
+      "stops when a build file is a parent folder of a listed path (deletion %s)",
+      (deletion) => {
+        const result = stop({
+          deletion,
+          listing: [...build, RECORD_FILE, "icon.png/inner.txt"],
+          protected: ["icon.png/inner.txt"],
+        });
+        expectStop(result, "layout-clash");
+      },
+    );
+
+    it.each(["protected", "unknown", "owned"] as const)(
+      "stops when a %s listed file sits where the build needs a folder",
+      (kind) => {
+        const result = stop({
+          deletion: "on",
+          listing: [...build, RECORD_FILE, "_astro"],
+          protected: kind === "protected" ? ["_astro"] : [],
+          record: publishRecord({
+            paths: kind === "owned" ? [...build, "_astro"] : build,
+          }),
+        });
+        expectStop(result, "layout-clash");
+      },
+    );
+
+    it("names the paths only in the detail", () => {
+      const result = stop({ listing: [...build, "_astro"] });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.detail).toContain("_astro");
+    });
+
+    it("is not a clash when the listed path is the same file as a build path", () => {
+      expect(stop({ listing: [...build, RECORD_FILE] }).ok).toBe(true);
+    });
+  });
+
+  it("stops with malformed-path when the record lists a malformed owned path (deletion on)", () => {
+    const result = planPublish({
+      build,
+      listing: [...build, RECORD_FILE],
+      record: null,
+      recordProblem: "malformed-path",
+      rules: rules({ deletion: "on" }),
+    });
+    expectStop(result, "malformed-path");
+  });
+
+  it("stops with no-previous-record for an unreadable record (deletion on)", () => {
+    const result = planPublish({
+      build,
+      listing: [...build, RECORD_FILE],
+      record: null,
+      recordProblem: "unreadable",
+      rules: rules({ deletion: "on" }),
+    });
+    expectStop(result, "no-previous-record");
+  });
+
+  it.each(["off", "on"] as const)(
+    "stops when an approved path is also a build path (deletion %s)",
+    (deletion) => {
+      const result = stop({ deletion, approved: ["icon.png"] });
+      expectStop(result, "approved-in-build");
       if (!result.ok) expect(result.detail).toContain("icon.png");
     },
   );
@@ -457,6 +626,35 @@ describe("planPublish: stop-guards (AC-11b, AC-12)", () => {
       });
       expect(result.ok).toBe(true);
       if (result.ok) expect(result.remove).toEqual(starter);
+    });
+
+    it("lists planned-not-approved and approved-not-planned paths in the detail", () => {
+      const starter = starterFiles(22);
+      const result = stop({
+        deletion: "on",
+        listing: [...build, ...starter, RECORD_FILE],
+        record: publishRecord({ paths: [...build, starter[21]] }),
+        approved: starter.slice(0, 21),
+      });
+      expectStop(result, "removal-limit");
+      if (result.ok) return;
+      expect(result.detail).toMatch(/planned, not approved:.*demo-22/);
+      expect(result.detail).not.toMatch(/planned, not approved:.*demo-01/);
+    });
+
+    it("lists an approved path the plan would not remove (already gone)", () => {
+      const starter = starterFiles(22);
+      const extra = "post/other/index.html";
+      const result = stop({
+        deletion: "on",
+        listing: [...build, ...starter, extra, RECORD_FILE],
+        record: publishRecord({ paths: [...build, ...starter] }),
+        approved: [extra, "post/gone/index.html"],
+      });
+      expectStop(result, "removal-limit");
+      if (result.ok) return;
+      expect(result.detail).toMatch(/approved, not planned:.*gone/);
+      expect(result.detail).not.toMatch(/approved, not planned:.*other/);
     });
 
     it("stops when the approved list misses one planned removal", () => {

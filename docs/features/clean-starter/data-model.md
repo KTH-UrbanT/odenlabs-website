@@ -139,12 +139,18 @@ by path.
 | `version` | `1` | required, literal | Format version. ADR-0002 says a format change needs the planner to read both versions for one publish. This field is how it tells them apart. ⚑ added by data-model |
 | `commit` | `string` | required, 40 hex characters | The source commit of the publish (ADR-0002) |
 | `publishedAt` | `string` | required, ISO 8601 UTC | When the record was written, at the end of the swap |
-| `files` | `RecordedFile[]` | required, non-empty, unique by `path`, sorted by `path` | Every path the publish uploaded. Sorting keeps the file diffable between publishes |
+| `files` | `RecordedFile[]` | required, non-empty, unique by `path`, sorted by `path` | Every path the publish uploaded, plus the owned files it left in place (see Carry invariant). Sorting keeps the file diffable between publishes |
 
 **Invariants.** `files` contains `index.html` and `logo.svg` (AC-12: a record without the front
 page and logo counts as no matching record). The record never lists itself or anything under
 `.publish-staging/`. It is written **last** by `swap.sh`, through write-to-temp-then-rename, so a
 publish interrupted before that step leaves the previous record intact (ADR-0003).
+
+**Carry invariant.** The new record is the uploaded files (fresh `sha256`) plus every owned file
+that this publish did **not** remove and that is still on the server, each with the `sha256` from
+the previous record. With deletion off, a page removed from the repository therefore stays in the
+record and is removed by the first publish with deletion on. Owned files no longer on the server
+are dropped, and a file that is protected is never carried (T22, review F-07).
 
 **Absent record.** On the first publish the file does not exist. With deletion off this is
 allowed, and that publish writes the first record (sad §4, rollout step 2). With deletion on it
@@ -250,14 +256,16 @@ stops before any upload (ADR-0004, Flow 5).
 | `commit` | `string` | 40 hex characters | |
 | `startedAt` | `string` | ISO 8601 UTC | |
 | `deletion` | `"on" \| "off"` | | Switch value in force for this publish |
-| `outcome` | `"published" \| "stopped" \| "post-check-failed"` | required | `stopped` = a planner guard failed and the server is untouched |
-| `failedCheck` | `FailedCheck \| null` | set iff `outcome` ≠ `published` | Closed set, below |
+| `outcome` | `"in-progress" \| "published" \| "stopped" \| "failed-before-swap" \| "failed-during-swap" \| "post-check-failed"` | required | `in-progress` = the interim report sealed before upload; `stopped` = a planner guard failed and the server is untouched; `failed-before-swap` = upload or a swap pre-check failed, server untouched; `failed-during-swap` = the swap began and failed |
+| `failedCheck` | `FailedCheck \| null` | set iff `outcome` is neither `published` nor `in-progress` | Closed set, below |
 | `entries` | `ReportEntry[]` | | The server listing plus outcome lists |
 | `swapSeconds` | `number \| null` | | Mixed-version window measured by `swap.sh` (≤ 5 s target) |
+| `unreadableFolders` | `number` | ≥ 0 | Folders the listing could not read; a count only, also shown publicly |
 
 `FailedCheck` is a closed set: `missing-front-page`, `missing-logo`, `no-previous-record`,
 `record-without-front-page-or-logo`, `removal-limit`, `protected-clash`, `malformed-path`,
-`no-maintainer-key`, `encryption-failed`, `remote-tools-missing`, `post-publish-check`. The
+`no-maintainer-key`, `encryption-failed`, `remote-tools-missing`, `layout-clash`, `listing-failed`, `upload-failed`, `swap-failed`,
+`post-publish-check`. The
 **public** job summary carries only these names and counts per `ReportEntry.kind` (sad §8
 "Logging and disclosure").
 

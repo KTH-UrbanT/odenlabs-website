@@ -15,6 +15,8 @@
 #
 # Usage: sh swap.sh <target-dir>
 # Exit codes: 3 = a required tool is missing, 4 = staging incomplete,
+#             5 = a target conflicts with the server's folder layout (all of
+#             3-5 happen before anything moves),
 #             other non-zero = a step failed (named on stderr).
 set -eu
 
@@ -41,6 +43,26 @@ now() {
   date +%s.%N 2>/dev/null | grep -E '^[0-9]+\.[0-9]+$' || date +%s
 }
 start=$(now)
+
+# 0. Check every target before anything moves: a target that is a folder, or
+#    that has a symlink or a plain file as a parent, would make a rename write
+#    into a folder, leave the site folder, or fail halfway (F-01).
+xargs -0 sh -c '
+  for p do
+    if [ -d "$p" ]; then
+      echo "layout-clash: $p" >&2
+      exit 255
+    fi
+    d=$(dirname -- "$p")
+    while [ "$d" != "." ] && [ "$d" != "/" ]; do
+      if [ -L "$d" ] || { [ -e "$d" ] && [ ! -d "$d" ]; }; then
+        echo "layout-clash: $p" >&2
+        exit 255
+      fi
+      d=$(dirname -- "$d")
+    done
+  done
+' sh <"$stage/swap/rename" || exit 5
 
 # 1. Rename the build into place.
 xargs -0 sh -c '
@@ -75,4 +97,4 @@ mv -f -- "$stage/swap/record.json" .publish-record.json
 
 end=$(now)
 rm -rf -- "$stage"
-awk -v s="$start" -v e="$end" 'BEGIN { printf "swap-seconds=%.3f\n", e - s }'
+LC_ALL=C awk -v s="$start" -v e="$end" 'BEGIN { printf "swap-seconds=%.3f\n", e - s }'
