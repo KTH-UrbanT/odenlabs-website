@@ -584,6 +584,38 @@
       ],
       "file": "docs/features/clean-starter/tasks/t30-docs-sync-4.md",
       "source": "review-2026-10-04-4 R4-05, R4-06"
+    },
+    {
+      "id": "T31",
+      "title": "Off-site guard: additive decoding, one attribute reader, browser-accurate regions",
+      "layer": "tests",
+      "deps": [
+        "T29"
+      ],
+      "acs": [],
+      "dod": "url()/@import scans read source plus decoded text, so minified CSS range queries no longer hide URLs; src/srcset/poster/link/image/use checks read the tag reader's attributes, so a raw '>' in a quoted value or a '/' separator no longer hides an href, and those scans are linear; noscript, comment, bogus-comment, CDATA, end-tag and unclosed SVG style regions end where the browser ends them; escaped '(' in unquoted url() is read; every miss-causing mutant from the review fails a test; the current build still passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t31-offsite-additive.md",
+      "source": "review-2026-10-05-5 F5-01, F5-02, F5-03, F5-04, F5-05"
+    },
+    {
+      "id": "T32",
+      "title": "US-06 malformed-path in ux-flows, sad Flow 5 deletion-off stops",
+      "layer": "docs",
+      "deps": [],
+      "acs": [
+        "AC-12"
+      ],
+      "dod": "ux-flows US-06 names malformed-path for build paths and the record; sad Flow 5 deletion-off stop branch names approved-in-build and malformed-path",
+      "files_hint": [
+        "docs/features/clean-starter/ux-flows.md",
+        "docs/features/clean-starter/sad.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t32-docs-sync-5.md",
+      "source": "review-2026-10-05-5 F5-06"
     }
   ]
 }

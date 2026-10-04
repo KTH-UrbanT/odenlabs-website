@@ -35,8 +35,10 @@
 | T28 | Docs sync: AC-13b in ux-flows, AC-13b scope, traceability (review F-1, F-3, F-4)             | docs   | pasichnyi | S        | —                   | done    |
 | T29 | Off-site guard: quote-aware tag scan, legacy entities, linear url() (review R4-01–04, R4-07)  | tests  | pasichnyi | M        | T27                 | done    |
 | T30 | US-06 check order in ux-flows, AC-13b approved case (review R4-05, R4-06)                    | docs   | pasichnyi | S        | —                   | done    |
+| T31 | Off-site guard: additive decoding, one attribute reader, regions (review F5-01–F5-05)         | tests  | pasichnyi | M        | T29                 | todo    |
+| T32 | US-06 malformed-path, sad Flow 5 deletion-off stops (review F5-06)                            | docs   | pasichnyi | S        | —                   | todo    |
 
-**Total:** 30 tasks, ~13.6 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
+**Total:** 32 tasks, ~14.6 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 
 **Blocked (2026-10-04):** T5 waits for the front-page copy (who-we-are paragraph and
 contact route, spec §8). T6 waits for T5 and for the maintainer's font choice and
