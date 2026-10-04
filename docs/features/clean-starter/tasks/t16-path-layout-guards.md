@@ -22,7 +22,7 @@ invent the missing part. -->
 
 # T16 — Stop a publish when the server's folder layout conflicts with the build
 
-Follow-up from the review: [`_review/review-2026-10-04.md`](../_review/review-2026-10-04.md), finding F-01. ACs: AC-11, AC-13 — full text in [spec.md §5](../spec.md).
+Follow-up from the review: [`_review/review-2026-10-04.md`](../_review/review-2026-10-04.md), finding F-01. ACs: AC-11, AC-13, AC-13b — full text in [spec.md §5](../spec.md).
 
 The protected-clash check in `deploy/plan.ts` (around line 334) only compares exact paths, and `deploy/remote/swap.sh` runs `mkdir -p` + `mv -f` without looking at what is already at the address. Reproduced: (1) a protected `x/x` on the server and build file `x` → `mv` writes into the folder, the protected file is overwritten; (2) server symlink `_astro -> ../outside` and build `_astro/a.css` → the file lands outside the site folder; (3) a file `a` on the server and build `a/b.html` → `mkdir -p` fails midway through the renames.
 

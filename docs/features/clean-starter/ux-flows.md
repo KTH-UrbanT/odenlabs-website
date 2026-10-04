@@ -151,13 +151,15 @@ flowchart TD
     A(["Maintainer removes a page from the repository; the change is accepted"]) --> B(["Publish runs, deletion on"])
     B --> C{"Build has the front page and logo?"}
     C -->|no| S["Publish stops before deleting: SCR-04 names the failed check (AC-12)"]
-    C -->|yes| D{"Target folder holds the previous record with its front page and logo?"}
-    D -->|no| S
-    D -->|yes| E{"Build file at a protected file's address?"}
+    C -->|yes| E{"Build file at a protected file's address?"}
     E -->|yes| T["Publish stops before changing anything: SCR-04 names the clash (AC-11b)"]
-    E -->|no| X{"A listed file or folder in the way of an address the build needs?"}
+    E -->|no| P{"Build file the maintainer also approved for removal?"}
+    P -->|yes| Q["Publish stops before changing anything: SCR-04 names approved-in-build (data-model guard)"]
+    P -->|no| X{"A listed file or folder in the way of an address the build needs?"}
     X -->|yes| Y["Publish stops before changing anything: SCR-04 names layout-clash and the path (AC-13b)"]
-    X -->|no| F{"More than 20 removals without an exactly matching approved list?"}
+    X -->|no| D{"Target folder holds the previous record with its front page and logo?"}
+    D -->|no| S
+    D -->|yes| F{"More than 20 removals without an exactly matching approved list?"}
     F -->|yes| S
     F -->|no| G["Upload build; remove recorded or approved files; protected files untouched (AC-11)"]
     G --> H{"Unknown files in the folder?"}
@@ -170,16 +172,20 @@ flowchart TD
 ```
 
 The maintainer removes a page from the repository, the change is accepted, and a publish runs with
-deletion on. Before it deletes anything, five checks run in order. Does the build contain the front
-page and the logo? Does the target folder hold the previous publish's record, with the front page
-and logo that record lists? Is there a build file at a protected file's address? Is any file or folder already on the server
-in the way of an address the build needs? Would the publish
-remove more than 20 files without an approved list that matches exactly? A missing front page or
-logo, a wrong folder, or too many removals stops the publish before any deletion, and the report
-names the failed check (AC-12). A clash with a protected address stops the publish before anything
-on the server changes (AC-11b). So does a listed file or folder in the way of the build, such as
-a file where the build needs a folder: the report names `layout-clash` and the path, and the file is
-left untouched (AC-13b). If every check passes, the build is uploaded, files a previous
+deletion on. Before it changes anything, six checks run in this order, the same order as
+`deploy/plan.ts`. Does the build contain the front page and the logo? Is there a build file at a
+protected file's address? Is a build file also on the maintainer's approved removal list? Is any
+file or folder already on the server in the way of an address the build needs? Does the target
+folder hold the previous publish's record, with the front page and logo that record lists? Would
+the publish remove more than 20 files without an approved list that matches exactly? The first
+check that fails stops the publish, and the report names it. A missing front page or logo, a wrong
+folder, or too many removals stops the publish before any deletion (AC-12). A clash with a
+protected address stops the publish before anything on the server changes (AC-11b), and so does a
+build file that is also approved for removal (`approved-in-build`, a data-model guard with no AC of
+its own). So does a listed file or folder in the way of the build, such as a file where the build
+needs a folder: the report names `layout-clash` and the path, and the file is left untouched
+(AC-13b). The first four checks run whatever the deletion setting; the record and removal checks
+run only with deletion on. If every check passes, the build is uploaded, files a previous
 publish recorded or the maintainer approved are removed, and protected files stay untouched
 (AC-11). Files the site never published and nobody reviewed are left in place and reported for a
 keep-or-remove decision (AC-13), unless one is in the way of the build (AC-13b). The publish report lists what was removed (AC-01 for the first
@@ -222,7 +228,7 @@ and the navigation takes them to any published section.
 | AC-10  | Flow US-06 → SCR-04 removed list → SCR-02 for the removed address        |                                                                          |
 | AC-11  | Flow US-06 → upload/remove node, protected files untouched               |                                                                          |
 | AC-11b | Flow US-06 → protected-address clash branch                              |                                                                          |
-| AC-12  | Flow US-06 → three stop branches into the shared stop node               | Missing front page or logo, wrong folder, removals above the limit       |
+| AC-12  | Flow US-06 → three stop branches into the shared stop node               | Missing front page or logo, wrong folder, removals above the limit; checks run in `deploy/plan.ts` order |
 | AC-13  | Flow US-06 → unknown-files branch → SCR-05                               | Re-reported on every publish until decided                               |
 | AC-13b | Flow US-06 → layout-clash branch → SCR-04                                | Stops whatever the deletion setting; the file in the way is untouched    |
 | AC-14  | N/A: repository content, no UI (US-07)                                   |                                                                          |

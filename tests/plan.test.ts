@@ -481,13 +481,14 @@ describe("planPublish: stop-guards (AC-11b, AC-12)", () => {
       },
     );
 
-    it.each(["protected", "unknown", "owned"] as const)(
+    it.each(["protected", "unknown", "owned", "approved"] as const)(
       "stops when a %s listed file sits where the build needs a folder (AC-11b, AC-13b)",
       (kind) => {
         const result = stop({
           deletion: "on",
           listing: [...build, RECORD_FILE, "_astro"],
           protected: kind === "protected" ? ["_astro"] : [],
+          approved: kind === "approved" ? ["_astro"] : [],
           record: publishRecord({
             paths: kind === "owned" ? [...build, "_astro"] : build,
           }),
