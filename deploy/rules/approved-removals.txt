@@ -1,0 +1,4 @@
+# Approved removals: server-folder files a maintainer has reviewed and approved
+# for removal. One path per line, relative to the target folder; no wildcards.
+# Above the routine limit of 20 removals, this list must equal the planned
+# removals exactly. Maintainers only (CODEOWNERS).

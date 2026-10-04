@@ -12,7 +12,7 @@
 | T5 | Minimal front page | ui | pasichnyi | S | — (maintainer copy) | todo |
 | T6 | Identity: palette, type, fonts, sign-off | ui | pasichnyi | M | T2, T4, T5 | todo |
 | T7 | Build guards: off-site refs, font budget | tests | pasichnyi | S | T6 | todo |
-| T8 | Publish model + rules files | domain | pasichnyi | M | — | todo |
+| T8 | Publish model + rules files | domain | pasichnyi | M | — | done |
 | T9 | Planner classification and plan | domain | pasichnyi | M | T8 | todo |
 | T10 | Planner stop-guards | domain | pasichnyi | M | T9 | todo |
 | T11 | Remote swap script | infra | pasichnyi | M | T8 | todo |
