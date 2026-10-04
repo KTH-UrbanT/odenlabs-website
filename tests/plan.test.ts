@@ -329,3 +329,178 @@ describe("planPublish: classification and plan", () => {
     expect(plan(input)).toEqual(plan(input));
   });
 });
+
+describe("planPublish: stop-guards (AC-11b, AC-12)", () => {
+  const build = buildFiles();
+
+  function stop(
+    overrides: Partial<{
+      build: string[];
+      listing: string[];
+      record: PublishRecord | null;
+      protected: string[];
+      approved: string[];
+      deletion: "on" | "off";
+    }> = {},
+  ) {
+    return planPublish({
+      build: overrides.build ?? build,
+      listing: overrides.listing ?? [...build, RECORD_FILE],
+      record:
+        overrides.record === undefined ? publishRecord() : overrides.record,
+      rules: rules(overrides),
+    });
+  }
+
+  function expectStop(result: ReturnType<typeof stop>, check: string) {
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.failedCheck).toBe(check);
+    expect(result.entries.map((e) => e.kind)).not.toContain("removed");
+    expect(result.entries.map((e) => e.kind)).not.toContain("uploaded");
+  }
+
+  it.each(["off", "on"] as const)(
+    "stops on a build file at a protected address, naming it (deletion %s)",
+    (deletion) => {
+      const result = stop({ deletion, protected: ["icon.png"] });
+      expectStop(result, "protected-clash");
+      if (!result.ok) expect(result.detail).toContain("icon.png");
+    },
+  );
+
+  it("stops when the build lacks the front page", () => {
+    expectStop(
+      stop({ build: build.filter((p) => p !== "index.html") }),
+      "missing-front-page",
+    );
+  });
+
+  it("stops when the build lacks the logo", () => {
+    expectStop(
+      stop({ build: build.filter((p) => p !== "logo.svg") }),
+      "missing-logo",
+    );
+  });
+
+  it("stops on a malformed build path", () => {
+    expectStop(stop({ build: [...build, "a//b.html"] }), "malformed-path");
+  });
+
+  describe("with deletion on", () => {
+    it("stops on an empty target folder", () => {
+      expectStop(
+        stop({ deletion: "on", listing: [], record: null }),
+        "no-previous-record",
+      );
+    });
+
+    it("stops on a wrong folder: unrelated files and no record", () => {
+      expectStop(
+        stop({
+          deletion: "on",
+          listing: ["home/thesis.pdf", "home/notes.txt"],
+          record: null,
+        }),
+        "no-previous-record",
+      );
+    });
+
+    it("stops when the record does not list the front page and logo", () => {
+      expectStop(
+        stop({
+          deletion: "on",
+          record: publishRecord({ paths: ["404.html"] }),
+        }),
+        "record-without-front-page-or-logo",
+      );
+    });
+
+    it("stops when the folder lacks the front page the record lists", () => {
+      expectStop(
+        stop({
+          deletion: "on",
+          listing: [...build.filter((p) => p !== "index.html"), RECORD_FILE],
+        }),
+        "record-without-front-page-or-logo",
+      );
+    });
+
+    it("allows up to 20 removals without an approved list", () => {
+      const old = starterFiles(20);
+      const result = stop({
+        deletion: "on",
+        listing: [...build, ...old, RECORD_FILE],
+        record: publishRecord({ paths: [...build, ...old] }),
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.remove).toHaveLength(20);
+    });
+
+    it("stops at 21 removals without an approved list", () => {
+      const old = starterFiles(21);
+      const result = stop({
+        deletion: "on",
+        listing: [...build, ...old, RECORD_FILE],
+        record: publishRecord({ paths: [...build, ...old] }),
+      });
+      expectStop(result, "removal-limit");
+      if (!result.ok) expect(result.detail).toContain("21");
+    });
+
+    it("allows 21 removals when the approved list equals them exactly", () => {
+      const starter = starterFiles(21);
+      const result = stop({
+        deletion: "on",
+        listing: [...build, ...starter, RECORD_FILE],
+        approved: starter,
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.remove).toEqual(starter);
+    });
+
+    it("stops when the approved list misses one planned removal", () => {
+      const starter = starterFiles(22);
+      expectStop(
+        stop({
+          deletion: "on",
+          listing: [...build, ...starter, RECORD_FILE],
+          record: publishRecord({ paths: [...build, starter[21]] }),
+          approved: starter.slice(0, 21),
+        }),
+        "removal-limit",
+      );
+    });
+
+    it("ignores approved files already gone from the server, with a warning", () => {
+      const starter = starterFiles(21);
+      const result = stop({
+        deletion: "on",
+        listing: [...build, ...starter, RECORD_FILE],
+        approved: [...starter, "gone.html"],
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.entries).toContainEqual(
+          expect.objectContaining({ kind: "warning", path: "gone.html" }),
+        );
+      }
+    });
+  });
+
+  it("with deletion off, publishes without a record and keeps the listing", () => {
+    const result = stop({ record: null, listing: ["demo.html"] });
+    expect(result.ok).toBe(true);
+  });
+
+  it("returns the listing with a stop so the maintainer can review it", () => {
+    const result = stop({
+      listing: [...build, "kthit.txt", RECORD_FILE],
+      protected: ["icon.png"],
+    });
+    expect(result.entries).toContainEqual({
+      kind: "unknown",
+      path: "kthit.txt",
+    });
+  });
+});

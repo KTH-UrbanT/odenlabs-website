@@ -250,14 +250,19 @@ export function classify(
 const byPath = (a: ReportEntry, b: ReportEntry) =>
   a.path < b.path ? -1 : a.path > b.path ? 1 : 0;
 
-/**
- * Plans one publish: upload the whole build; with deletion on, remove owned
- * or approved files the build no longer has; never touch protected or
- * unknown files; report every server file the build lacks.
- */
-export function planPublish(input: PlanInput): PlanResult {
+const REPLACED_UNKNOWN = "replaced a file the site never published";
+
+interface Sorted {
+  upload: string[];
+  remove: string[];
+  entries: ReportEntry[];
+  /** Normalised paths present in the target folder. */
+  present: Set<string>;
+}
+
+/** Sorts every listed file by ownership; removals only when deletion is on. */
+function sortListing(input: PlanInput, deletionOn: boolean): Sorted {
   const { record, rules } = input;
-  const deletionOn = rules.settings.deletion === "on";
   const build = [...input.build].sort();
   const inBuild = new Set(build);
   const entries: ReportEntry[] = build.map((path) => ({
@@ -265,6 +270,7 @@ export function planPublish(input: PlanInput): PlanResult {
     path,
   }));
   const remove: string[] = [];
+  const present = new Set<string>();
 
   for (const raw of input.listing) {
     const path = normalisePath(raw);
@@ -273,13 +279,14 @@ export function planPublish(input: PlanInput): PlanResult {
       continue;
     }
     if (isOutsideListing(path)) continue;
+    present.add(path);
     const ownership = classify(path, record, rules);
     if (inBuild.has(path)) {
       if (ownership === "unknown") {
         entries.push({
           kind: "warning",
           path,
-          message: "replaced a file the site never published",
+          message: REPLACED_UNKNOWN,
         });
       }
       continue;
@@ -293,11 +300,102 @@ export function planPublish(input: PlanInput): PlanResult {
       entries.push({ kind: `${ownership}-pending`, path });
     }
   }
+  for (const path of rules.approved) {
+    if (!present.has(path)) {
+      entries.push({
+        kind: "warning",
+        path,
+        message: "approved for removal but no longer on the server",
+      });
+    }
+  }
+  return { upload: build, remove: remove.sort(), entries, present };
+}
 
+/** The first guard that fails (AC-11b, AC-12), or null. */
+function firstFailedCheck(
+  input: PlanInput,
+  sorted: Sorted,
+): { failedCheck: FailedCheck; detail: string } | null {
+  const { build, record, rules } = input;
+  const malformed = build.find((p) => normalisePath(p) !== p);
+  if (malformed !== undefined) {
+    return { failedCheck: "malformed-path", detail: JSON.stringify(malformed) };
+  }
+  if (!build.includes(FRONT_PAGE)) {
+    return {
+      failedCheck: "missing-front-page",
+      detail: `build lacks ${FRONT_PAGE}`,
+    };
+  }
+  if (!build.includes(LOGO)) {
+    return { failedCheck: "missing-logo", detail: `build lacks ${LOGO}` };
+  }
+  const clashes = build.filter((p) => rules.protected.includes(p));
+  if (clashes.length > 0) {
+    return {
+      failedCheck: "protected-clash",
+      detail: `build file at a protected address: ${clashes.join(", ")}`,
+    };
+  }
+  if (rules.settings.deletion === "off") return null;
+
+  if (record === null) {
+    return {
+      failedCheck: "no-previous-record",
+      detail: "target folder has no readable publish record",
+    };
+  }
+  for (const path of [FRONT_PAGE, LOGO]) {
+    if (!record.files.some((f) => f.path === path)) {
+      return {
+        failedCheck: "record-without-front-page-or-logo",
+        detail: `previous record does not list ${path}`,
+      };
+    }
+    if (!sorted.present.has(path)) {
+      return {
+        failedCheck: "record-without-front-page-or-logo",
+        detail: `target folder lacks ${path}, which the record lists`,
+      };
+    }
+  }
+  const limit = rules.settings.removalLimit;
+  if (sorted.remove.length > limit) {
+    const approved = rules.approved.filter((p) => sorted.present.has(p)).sort();
+    const exact =
+      approved.length === sorted.remove.length &&
+      approved.every((p, i) => p === sorted.remove[i]);
+    if (!exact) {
+      return {
+        failedCheck: "removal-limit",
+        detail: `${sorted.remove.length} removals exceed the routine limit of ${limit} and differ from the approved list`,
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Plans one publish: upload the whole build; with deletion on, remove owned
+ * or approved files the build no longer has; never touch protected or
+ * unknown files; report every server file the build lacks. Stops before any
+ * change when a guard fails, still returning the listing for review.
+ */
+export function planPublish(input: PlanInput): PlanResult {
+  const deletionOn = input.rules.settings.deletion === "on";
+  const sorted = sortListing(input, deletionOn);
+  const failed = firstFailedCheck(input, sorted);
+  if (failed !== null) {
+    const listing = sortListing(input, false).entries.filter(
+      (e) => e.kind !== "uploaded" && e.message !== REPLACED_UNKNOWN,
+    );
+    return { ok: false, ...failed, entries: listing.sort(byPath) };
+  }
   return {
     ok: true,
-    upload: build,
-    remove: remove.sort(),
-    entries: entries.sort(byPath),
+    upload: sorted.upload,
+    remove: sorted.remove,
+    entries: sorted.entries.sort(byPath),
   };
 }
