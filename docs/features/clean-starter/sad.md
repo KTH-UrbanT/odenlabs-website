@@ -241,39 +241,79 @@ Each tactical decision in later sections should trace to one of these seeds. Tac
      just one surface's container — swap/add per what was declared in §4. → _shared/surfaces.md
      📌 e.g. «web app, content API, media worker, datastore, object store, CDN». -->
 
-<One paragraph: layered / hexagonal / clean / event-driven, and why.>
+There are two surfaces with two styles, both following the repo's conventions. The **static
+site** keeps Astro's standard folders (`CLAUDE.md`): pages are routes, `Base.astro` is the one
+layout, cross-entity logic is a pure function in `src/lib/` with a test, and styling is tokens
+only. The **publish worker** is a small **functional-core / imperative-shell** module in a new
+top-level `deploy/` folder. The core (`plan.ts`) is a pure function holding every rule. The shell
+(`publish.ts`, `ssh.ts`, `report.ts`, `remote/swap.sh`) only does I/O and applies an accepted
+plan (ADR-0002). `deploy/` sits beside `src/`, not inside it, because it is not site code and
+must never be bundled or shipped to visitors. Both share `tests/` and the one `npm test` and
+`npm run lint` gate.
 
 **Internal decomposition:**
 
 ```
-<e.g. modules/<feature>/>
-├── domain/       <entities + sentinel errors>
-├── app/          <use cases / services>
-├── infra/        <repository + integration impl>
-├── ports/        <handlers, DTOs, error mapping>
-└── wiring        <self-wiring entry point>
+src/                                   # web-frontend surface
+├── data/sections.ts                   # ordered planned sections {label, href} — Research, People, Join/Contact
+├── lib/navigation.ts                  # offeredSections(planned, builtRoutes) — pure (AC-03)
+├── lib/contrast.ts                    # WCAG contrast ratio + pair check — pure (AC-06)
+├── styles/tokens.css                  # palette + type derived from the logo (identity, D5)
+├── styles/contrast-pairs.ts           # declared text/background pairs + size class, next to the palette
+├── styles/global.css                  # @font-face for the self-hosted fonts
+├── components/Header.astro            # renders offeredSections(); logo links home
+├── pages/index.astro                  # front page — name, who-we-are, KTH affiliation, contact (AC-15)
+└── pages/404.astro                    # not-found page — Base layout, nav, link home, noindex (AC-02)
+public/
+├── logo.svg, icon.png                 # unchanged logo (non-goal: no redraw)
+└── fonts/*.woff2                      # vendored, Latin subset, open licence (≤ 100 KB per page)
+deploy/                                # worker surface
+├── plan.ts                            # planPublish() — pure core: ownership, every guard (AC-07, AC-11–AC-13)
+├── publish.ts                         # shell entry: list → plan → report → stage → swap → verify
+├── ssh.ts                             # thin wrapper over the runner's ssh/scp
+├── report.ts                          # public summary (counts) + GPG-encrypted full report (AC-09)
+├── remote/swap.sh                     # POSIX sh run on the server: rename into place, remove, write record
+├── rules/protected.txt                # protected files, one path per line
+├── rules/approved-removals.txt        # maintainer-approved removals, one path per line
+├── rules/settings.json                # { "deletion": "off", "removalLimit": 20 }
+└── maintainers/*.asc                  # maintainers' public GPG keys
+tests/
+├── navigation.test.ts, contrast.test.ts          # unit
+├── plan.test.ts                                  # unit — one case per guard and per AC-07/AC-11–AC-13 branch
+├── swap.test.ts                                  # integration — runs swap.sh against a temp folder
+└── build.test.ts                                 # smoke + 404 present + 0 off-site refs + font budget
+.github/
+├── workflows/publish.yaml             # check job (all PRs + main); deploy job (main, environment kth-server)
+└── CODEOWNERS                         # maintainers own deploy/ and .github/ (ADR-0005)
 ```
 
 **C4 Container (L2):** <!-- syntax → references/c4-mermaid-syntax.md. Real names, no <placeholder> stubs. ONE Container per declared target_surface (frontmatter); the web container below is one example surface. -->
 
 ```mermaid
 C4Container
-    title <feature> — Containers
+    title clean-starter — Containers
 
-    Person(actor, "<Actor>")
+    Person(visitor, "Visitor", "Reads the site")
+    Person(maintainer, "Maintainer", "Merges reviewed changes, reads the report")
 
-    Container_Boundary(app, "<Our system>") {
-        Container(web, "<Web/UI>", "<technology>", "<purpose>")
-        Container(api, "<API/handler>", "<technology>", "<purpose>")
-        ContainerDb(db, "<Datastore>", "<technology>", "<purpose>")
+    System_Boundary(oden, "Oden Lab website") {
+        Container(site, "Static site", "Astro 7, static HTML and CSS, self-hosted fonts", "Front page, not-found page, navigation of offered sections, tokens from the logo")
+        Container(publisher, "Publish job", "Node 24 TypeScript on a GitHub Actions runner, OpenSSH", "Lists the server folder, plans, stages, swaps, verifies and reports")
+        ContainerDb(rules, "Publishing rules", "Files in git under deploy/rules and deploy/maintainers", "Protected list, approved removals, deletion switch, maintainer keys")
+        ContainerDb(report, "Encrypted publish report", "GPG-encrypted workflow artifact", "Server listing, unknown and removed files, failed check")
     }
 
-    System_Ext(ext, "<External>", "<purpose>")
+    System_Ext(github, "GitHub", "Review, branch protection, Actions, main-only kth-server environment")
+    System_Ext(server, "KTH web server", "Shared server folder: published files, publish record, staging folder, protected and unknown files")
 
-    Rel(actor, web, "<interaction>", "<protocol>")
-    Rel(web, api, "<calls>")
-    Rel(api, db, "<reads/writes>", "<driver>")
-    Rel(api, ext, "<emits>", "<protocol>")
+    Rel(maintainer, github, "Reviews and merges", "HTTPS")
+    Rel(github, publisher, "Starts on merge to main with main-only SSH secrets")
+    Rel(publisher, site, "Takes the built files of")
+    Rel(publisher, rules, "Reads")
+    Rel(publisher, server, "Lists, uploads archive, runs swap script, verifies", "SSH and HTTPS")
+    Rel(publisher, report, "Writes")
+    Rel(maintainer, report, "Downloads and decrypts")
+    Rel(visitor, server, "Reads the published static site", "HTTPS")
 ```
 
 ## 6. Runtime view
