@@ -31,7 +31,7 @@
 | T24 | Off-site guard: entity-encoded `url()` in style attributes (review R-01)                   | tests  | pasichnyi | S        | T17                 | done    |
 | T25 | AC-03 build test against a real section page (review R-02)                                   | tests  | pasichnyi | S        | T20                 | done    |
 | T26 | Docs sync: AC-13b, ownership table, CODEOWNERS rule, failure outcomes (review R-03, R-04)    | docs   | pasichnyi | S        | T24, T25            | done    |
-| T27 | Off-site guard: decode every attribute value, remaining entity forms (review F-2, R3-01/02/04) | tests  | pasichnyi | S        | T24                 | todo    |
+| T27 | Off-site guard: decode every attribute value, remaining entity forms (review F-2, R3-01/02/04) | tests  | pasichnyi | S        | T24                 | done    |
 | T28 | Docs sync: AC-13b in ux-flows, AC-13b scope, traceability (review F-1, F-3, F-4)             | docs   | pasichnyi | S        | —                   | todo    |
 
 **Total:** 28 tasks, ~12.6 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).

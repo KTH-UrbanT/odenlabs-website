@@ -71,6 +71,50 @@ describe("findOffSiteRequests", () => {
     );
   });
 
+  it("reports an entity-encoded url() in single-quoted, unquoted and hex-encoded style values", () => {
+    const html = `
+      <div style='background:url(&quot;https://b.example.com/x&quot;)'></div>
+      <div style="background:url(&#x22;https://h.example.com/x&#x22;)"></div>
+      <div style=background:url(&quot;https://c.example.com/x&quot;)></div>`;
+    expect(findOffSiteRequests(html, own).sort()).toEqual([
+      "https://b.example.com/x",
+      "https://c.example.com/x",
+      "https://h.example.com/x",
+    ]);
+  });
+
+  it("reports an entity-encoded url() in any attribute, as Astro emits SVG mask and filter", () => {
+    const html = `
+      <svg><path mask="url(&quot;https://m.example.com/m.svg#m&quot;)" filter='url(&quot;https://f.example.com/f.svg#f&quot;)'/></svg>`;
+    expect(findOffSiteRequests(html, own).sort()).toEqual([
+      "https://f.example.com/f.svg#f",
+      "https://m.example.com/m.svg#m",
+    ]);
+  });
+
+  it("reports an entity-encoded url() in a <style> inside inline SVG", () => {
+    const html = `<svg viewBox="0 0 1 1"><style>.a { fill: url(&quot;https://s.example.com/p.svg#p&quot;); }</style></svg>`;
+    expect(findOffSiteRequests(html, own)).toEqual([
+      "https://s.example.com/p.svg#p",
+    ]);
+  });
+
+  it("decodes numeric references without ';' and the named punctuation references", () => {
+    const html = `
+      <div style="background:url(&#34https://d.example.com/x&#34)"></div>
+      <div style="background:url(&quot;https&colon;&sol;&sol;e.example.com/x&quot;)"></div>`;
+    expect(findOffSiteRequests(html, own).sort()).toEqual([
+      "https://d.example.com/x",
+      "https://e.example.com/x",
+    ]);
+  });
+
+  it("does not decode twice", () => {
+    const html =
+      '<div style="background:url(&amp;quot;https://f.example.com/x&amp;quot;)"></div>';
+    expect(findOffSiteRequests(html, own)).toEqual([]);
+  });
+
   it("decodes &amp; in attribute values before reporting", () => {
     const html = '<img src="https://img.example.com/p.png?a=1&amp;b=2">';
     expect(findOffSiteRequests(html, own)).toEqual([

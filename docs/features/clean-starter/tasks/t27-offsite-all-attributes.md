@@ -7,7 +7,7 @@ acs: []
 files_hint: ["src/lib/offsite-requests.ts", "tests/offsite-requests.test.ts"]
 owner: "pasichnyi"
 source: "review-2026-10-04-3 F-2, R3-01, R3-02, R3-04"
-status: "todo"
+status: "done"
 ---
 
 <!-- To the executing agent: work from what is inlined here. If a slice is insufficient,
@@ -27,13 +27,13 @@ its entities too. The decoder (`:31`) also needs a closing `;` and knows five na
 
 ## Checklist
 
-- [ ] Decode every attribute value — double-quoted, single-quoted and unquoted — before the `url()` / `@import` pass, not only `style`. Text nodes stay undecoded (the prose test at `tests/offsite-requests.test.ts:89-93` must keep passing).
-- [ ] Decode the text of `<style>` elements inside `<svg>`.
-- [ ] Numeric entities match with an optional `;` (`&#(\d+);?`, `&#x([0-9a-f]+);?`); add `colon`, `sol`, `lpar`, `rpar`, `period`, `Tab`, `NewLine` to the named set. No double decoding (`&amp;quot;` stays `&quot;`); invalid code points don't throw.
-- [ ] Unit cases, each reported: Astro's exact `mask="url(&quot;https://m.example.com/m.svg#m&quot;)"`; `<svg><style>…url(&quot;https://…&quot;)</style></svg>`; `url(&#34https://d.example.com/x&#34)`; `url(&quot;https&colon;&sol;&sol;e.example.com/x&quot;)`; an unquoted `style=background:url(&quot;https://c.example.com/x&quot;)`.
-- [ ] R3-04: a single-quoted `style='background:url(&quot;https://b.example.com/x&quot;)'` case and a hex `url(&#x22;https://h.example.com/x&#x22;)` case, both reported. Check that removing either decode branch now fails a test.
+- [x] Decode every attribute value — double-quoted, single-quoted and unquoted — before the `url()` / `@import` pass, not only `style`. Text nodes stay undecoded (the prose test at `tests/offsite-requests.test.ts:89-93` must keep passing).
+- [x] Decode the text of `<style>` elements inside `<svg>`.
+- [x] Numeric entities match with an optional `;` (`&#(\d+);?`, `&#x([0-9a-f]+);?`); add `colon`, `sol`, `lpar`, `rpar`, `period`, `Tab`, `NewLine` to the named set. No double decoding (`&amp;quot;` stays `&quot;`); invalid code points don't throw.
+- [x] Unit cases, each reported: Astro's exact `mask="url(&quot;https://m.example.com/m.svg#m&quot;)"`; `<svg><style>…url(&quot;https://…&quot;)</style></svg>`; `url(&#34https://d.example.com/x&#34)`; `url(&quot;https&colon;&sol;&sol;e.example.com/x&quot;)`; an unquoted `style=background:url(&quot;https://c.example.com/x&quot;)`.
+- [x] R3-04: a single-quoted `style='background:url(&quot;https://b.example.com/x&quot;)'` case and a hex `url(&#x22;https://h.example.com/x&#x22;)` case, both reported. Check that removing either decode branch now fails a test.
 
 ## Definition of Done
 
-- [ ] every case above is reported; own-host and relative encoded `url()` still not reported; the current build still passes
-- [ ] `npm run lint && npm test` clean
+- [x] every case above is reported; own-host and relative encoded `url()` still not reported; the current build still passes
+- [x] `npm run lint && npm test` clean
