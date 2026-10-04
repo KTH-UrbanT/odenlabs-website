@@ -16,7 +16,7 @@
 | T9 | Planner classification and plan | domain | pasichnyi | M | T8 | done |
 | T10 | Planner stop-guards | domain | pasichnyi | M | T9 | done |
 | T11 | Remote swap script | infra | pasichnyi | M | T8 | done |
-| T12 | Publish report (public + encrypted) | infra | pasichnyi | M | T8 | todo |
+| T12 | Publish report (public + encrypted) | infra | pasichnyi | M | T8 | done |
 | T13 | Publish shell over SSH | app | pasichnyi | 1d | T1, T10, T11, T12 | todo |
 | T14 | Workflow + CODEOWNERS | wiring | pasichnyi | S | T13 | todo |
 | T15 | Runbook + repository sweep | docs | pasichnyi | S | T14 | todo |
