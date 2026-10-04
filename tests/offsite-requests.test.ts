@@ -86,6 +86,12 @@ describe("findOffSiteRequests", () => {
     expect(findOffSiteRequests(html, own)).toEqual([]);
   });
 
+  it("does not decode entity-encoded page text outside style attributes", () => {
+    const html =
+      "<p>Write url(&quot;https://x.example.com/a&quot;) in your CSS.</p>";
+    expect(findOffSiteRequests(html, own)).toEqual([]);
+  });
+
   it("allows own-host, relative and data URLs, plain links and mailto", () => {
     const html = `
       <link rel="stylesheet" href="/a.css">

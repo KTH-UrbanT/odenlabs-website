@@ -69,8 +69,14 @@ export function findOffSiteRequests(source: string, ownHost: string): string[] {
     for (const candidate of valueOf(m).split(","))
       add(candidate.trim().split(/\s+/)[0]);
   }
-  // Decoded, so entity-encoded quotes in `style` attributes are seen as quotes.
-  const text = decodeEntities(source);
+  // Only `style` attribute values are decoded, so their entity-encoded quotes
+  // read as quotes; `<style>` blocks and CSS files are never entity-encoded,
+  // and decoding page text would report prose as requests.
+  const text = source.replace(
+    /(\sstyle\s*=\s*)(?:"([^"]*)"|'([^']*)')/gi,
+    (_, lead: string, dq?: string, sq?: string) =>
+      `${lead}"${decodeEntities(dq ?? sq ?? "")}"`,
+  );
   for (const [, url] of text.matchAll(/url\(\s*["']?([^"')]*?)["']?\s*\)/gi)) {
     add(url);
   }
