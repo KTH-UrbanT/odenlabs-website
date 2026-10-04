@@ -549,6 +549,41 @@
       ],
       "file": "docs/features/clean-starter/tasks/t28-docs-sync-3.md",
       "source": "review-2026-10-04-3 F-1, F-3, F-4"
+    },
+    {
+      "id": "T29",
+      "title": "Off-site guard: quote-aware tag scan, legacy entities, exact-case names, linear url() scan",
+      "layer": "tests",
+      "deps": [
+        "T27"
+      ],
+      "acs": [],
+      "dod": "Raw '<' or '</svg>' in an attribute and '/' separators no longer hide an encoded url(); &quot/&amp/&lt/&gt without ';' are decoded per the browser attribute rule; entity names match exact case; url() scan is linear on input with no ')'; every mutant listed in the review fails a test; the current build still passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t29-offsite-tokenizer.md",
+      "source": "review-2026-10-04-4 R4-01, R4-02, R4-03, R4-04, R4-07"
+    },
+    {
+      "id": "T30",
+      "title": "US-06 check order in ux-flows, AC-13b approved case, T16 trace line",
+      "layer": "docs",
+      "deps": [],
+      "acs": [
+        "AC-11b",
+        "AC-12",
+        "AC-13b"
+      ],
+      "dod": "ux-flows US-06 check order matches deploy/plan.ts including approved-in-build; AC-13b layout-clash test covers protected, unknown, owned and approved; T16 body lists AC-13b",
+      "files_hint": [
+        "docs/features/clean-starter/ux-flows.md",
+        "tests/plan.test.ts",
+        "docs/features/clean-starter/tasks/t16-path-layout-guards.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t30-docs-sync-4.md",
+      "source": "review-2026-10-04-4 R4-05, R4-06"
     }
   ]
 }
