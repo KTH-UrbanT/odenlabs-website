@@ -60,6 +60,15 @@ files) is the `publish-report` artifact of the run, encrypted to every key in
 unzip publish-report.zip && gpg -d publish-report.gpg
 ```
 
+## Merging a Code-Owner-gated change
+
+`deploy/`, `.github/` and the two `src/` files the worker imports
+(`src/data/sections.ts`, `src/lib/navigation.ts`) need Code Owner review, and
+GitHub does not let an author approve their own pull request. A sole
+maintainer merges such a change in one of two ways: let the repository admin
+bypass the Code Owner rule for that merge, or set required approvals to 0
+while keeping Code Owner review requested once a second maintainer exists.
+
 ## Rollout
 
 Deletion stays off until step 4. Do the steps in order.
