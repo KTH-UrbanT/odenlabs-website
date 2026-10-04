@@ -42,6 +42,26 @@ now() {
 }
 start=$(now)
 
+# 0. Check every target before anything moves: a target that is a folder, or
+#    that has a symlink or a plain file as a parent, would make a rename write
+#    into a folder, leave the site folder, or fail halfway (F-01).
+xargs -0 sh -c '
+  for p do
+    if [ -d "$p" ]; then
+      echo "layout-clash: $p" >&2
+      exit 255
+    fi
+    d=$(dirname -- "$p")
+    while [ "$d" != "." ] && [ "$d" != "/" ]; do
+      if [ -L "$d" ] || { [ -e "$d" ] && [ ! -d "$d" ]; }; then
+        echo "layout-clash: $p" >&2
+        exit 255
+      fi
+      d=$(dirname -- "$d")
+    done
+  done
+' sh <"$stage/swap/rename"
+
 # 1. Rename the build into place.
 xargs -0 sh -c '
   for p do

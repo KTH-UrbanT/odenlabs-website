@@ -208,6 +208,7 @@ export type FailedCheck =
   | "record-without-front-page-or-logo"
   | "removal-limit"
   | "protected-clash"
+  | "layout-clash"
   | "malformed-path"
   | "no-maintainer-key"
   | "encryption-failed"
@@ -312,6 +313,22 @@ function sortListing(input: PlanInput, deletionOn: boolean): Sorted {
   return { upload: build, remove: remove.sort(), entries, present };
 }
 
+/**
+ * A build path and a listed path where one is a strict parent folder of the
+ * other: the swap would write into a folder, or need a folder where a file is.
+ */
+function findLayoutClash(build: string[], listing: string[]): string | null {
+  const listed = listing
+    .map(normalisePath)
+    .filter((p): p is string => p !== null && !isOutsideListing(p));
+  for (const b of build) {
+    for (const l of listed) {
+      if (l.startsWith(`${b}/`) || b.startsWith(`${l}/`)) return `${b} / ${l}`;
+    }
+  }
+  return null;
+}
+
 /** The first guard that fails (AC-11b, AC-12), or null. */
 function firstFailedCheck(
   input: PlanInput,
@@ -336,6 +353,13 @@ function firstFailedCheck(
     return {
       failedCheck: "protected-clash",
       detail: `build file at a protected address: ${clashes.join(", ")}`,
+    };
+  }
+  const layout = findLayoutClash(build, input.listing);
+  if (layout !== null) {
+    return {
+      failedCheck: "layout-clash",
+      detail: `build path and server path overlap as folder and file: ${layout}`,
     };
   }
   if (rules.settings.deletion === "off") return null;

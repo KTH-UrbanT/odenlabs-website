@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  readlinkSync,
   statSync,
   symlinkSync,
   utimesSync,
@@ -35,7 +36,9 @@ function snapshot(): Map<string, { bytes: string; mtime: number }> {
       const full = join(dir, entry.name);
       const rel = relative(target, full);
       if (rel === STAGE) continue;
-      if (entry.isDirectory()) walk(full);
+      if (entry.isSymbolicLink())
+        files.set(rel, { bytes: `-> ${readlinkSync(full)}`, mtime: 0 });
+      else if (entry.isDirectory()) walk(full);
       else
         files.set(rel, {
           bytes: readFileSync(full, "latin1"),
@@ -163,6 +166,44 @@ describe("swap.sh", () => {
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toMatch(/remote-tools-missing: find/);
+    expect(snapshot()).toEqual(before);
+  });
+
+  it("refuses a folder at a file address without touching protected files", () => {
+    put("x/x", "protected inside a folder");
+    stage({ x: "new file named like the folder" }, []);
+    const before = snapshot();
+
+    const result = swap();
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(/layout-clash/);
+    expect(snapshot()).toEqual(before);
+  });
+
+  it("refuses a symlinked parent and writes nothing outside the site folder", () => {
+    const outside = mkdtempSync(join(tmpdir(), "outside-"));
+    symlinkSync(outside, join(target, "_astro"));
+    stage({ "_astro/a.css": "body{}", "index.html": "new" }, []);
+    const before = snapshot();
+
+    const result = swap();
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(/layout-clash/);
+    expect(readdirSync(outside)).toEqual([]);
+    expect(snapshot()).toEqual(before);
+  });
+
+  it("refuses a file where the build needs a folder before any rename", () => {
+    put("a", "a file");
+    stage({ "index.html": "new", "a/b.html": "needs folder a" }, []);
+    const before = snapshot();
+
+    const result = swap();
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(/layout-clash/);
     expect(snapshot()).toEqual(before);
   });
 });

@@ -369,6 +369,45 @@ describe("planPublish: stop-guards (AC-11b, AC-12)", () => {
     },
   );
 
+  describe("layout clashes between a build path and a listed path (F-01)", () => {
+    it.each(["off", "on"] as const)(
+      "stops when a build file is a parent folder of a listed path (deletion %s)",
+      (deletion) => {
+        const result = stop({
+          deletion,
+          listing: [...build, RECORD_FILE, "icon.png/inner.txt"],
+          protected: ["icon.png/inner.txt"],
+        });
+        expectStop(result, "layout-clash");
+      },
+    );
+
+    it.each(["protected", "unknown", "owned"] as const)(
+      "stops when a %s listed file sits where the build needs a folder",
+      (kind) => {
+        const result = stop({
+          deletion: "on",
+          listing: [...build, RECORD_FILE, "_astro"],
+          protected: kind === "protected" ? ["_astro"] : [],
+          record: publishRecord({
+            paths: kind === "owned" ? [...build, "_astro"] : build,
+          }),
+        });
+        expectStop(result, "layout-clash");
+      },
+    );
+
+    it("names the paths only in the detail", () => {
+      const result = stop({ listing: [...build, "_astro"] });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.detail).toContain("_astro");
+    });
+
+    it("is not a clash when the listed path is the same file as a build path", () => {
+      expect(stop({ listing: [...build, RECORD_FILE] }).ok).toBe(true);
+    });
+  });
+
   it("stops when the build lacks the front page", () => {
     expectStop(
       stop({ build: build.filter((p) => p !== "index.html") }),
