@@ -6,6 +6,10 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+# The job token is read-only; nothing here pushes or comments.
+permissions:
+  contents: read
+
 # Superseded pull-request checks are cancelled; a publish never is, because a
 # cancelled publish could stop mid-swap.
 concurrency:
@@ -57,6 +61,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@v4

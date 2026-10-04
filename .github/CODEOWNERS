@@ -2,3 +2,6 @@
 # (ADR-0005). Branch protection must require their review for these paths.
 /deploy/   @pasichnyi
 /.github/  @pasichnyi
+# The deploy step imports these while the server key is in its environment.
+/src/data/sections.ts   @pasichnyi
+/src/lib/navigation.ts  @pasichnyi
