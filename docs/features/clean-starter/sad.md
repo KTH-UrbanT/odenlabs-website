@@ -558,12 +558,30 @@ Each §1 quality goal expanded into a full scenario (numbers quoted verbatim fro
 
 | Risk / debt | Severity | Mitigation | Owner |
 |---|---|---|---|
-| <e.g. Worker lag may reach hours during a downstream outage> | Medium | <alert >10 min, on-call playbook, retry backoff> | <DevOps> |
-| <e.g. No event-schema versioning in v1> | Medium | <ADR-NNNN planned for v2, tolerate unknown fields> | <Backend> |
-| Open architectural decision: <decision-headline> | Open question | Resolve before <stage trigger or YYYY-MM-DD>; <inline rationale from the Save-as-OQ> | <owner> |
+| The KTH server's shell may lack `find` or `mv`. Only `tar` is evidenced, by today's `scp-action`; an SFTP-only account would break the executor and the swap (ADR-0002, ADR-0003). | Medium | Rollout step 2's probe publish (deletion off) checks `command -v find tar mv` before anything else and stops with a named failure. Fallback if missing: an SFTP-batch executor variant. Only the shell layer changes, not the planner. | pasichnyi |
+| Others write to the shared folder (KTH IT, certificate renewal, verification files). Spec §8 asks who, with the default "nobody". | Medium | Unknown files are never deleted and are reported on every publish (AC-13). The first listing (rollout step 2) is the evidence. The spec question is due before deletion is switched on. | pasichnyi |
+| Repository settings drift: branch protection, the `kth-server` environment's `main`-only rule or CODEOWNERS is relaxed, quietly reopening the path from an unmerged branch to the server key (ADR-0005). | Medium | The deploy job declares `environment: kth-server`, so missing secrets fail loudly. Re-check the three settings as part of every change that sets `deletion: "on"`. | pasichnyi |
+| The maintainer loses their GPG private key, so the listing and reports become unreadable (ADR-0004). | Medium | Keep an offline backup of the key. A new key is a reviewed change to `deploy/maintainers/`. Deletion stays off while no maintainer can read the report. | pasichnyi |
+| The shared folder's disk quota may not hold a second copy of the site during staging (ADR-0003). | Low | The probe publish reports free space. The site is small (§7 thresholds). A failed unpack stops before the rename step, so the old version stays served. | pasichnyi |
+| A file someone else owns has an unusual name (newline, control character) that the listing parser cannot handle. | Low | The listing is NUL-separated. A malformed name on an **unknown** file is reported and never acted on. The planner stops only when a path it would act on (build, owned, approved or protected) is malformed (§8 ID strategy), so one stray file cannot block every publish. | pasichnyi |
+| Guards too tight: more than the spec §7 target of "≤ 1 per month" false-alarm stops. | Low | Count stops in the maintainer's publish notes. The routine limit and approvals are reviewed rule-file edits, not code changes. | pasichnyi |
+| KTH graphic profile may not allow the group's own palette and type (spec §8, due 2026-10-18). | Low | Styling is tokens only, so a forced change is a `tokens.css` edit, still gated by the contrast test (QG-3). | pasichnyi |
+| Rights holder after the licence file is removed (spec §8, due 2026-10-31). | Low | Not architectural. The default "all rights reserved, held by the group" needs no code. | pasichnyi |
+| Front-page copy not yet supplied (spec §8, due before `sdd:implement`). | Low | AC-15 cannot pass without it. `implement` treats the copy as an input, not something it invents. | pasichnyi |
+| Stale architecture map: `docs/architecture-map.md` reflects 750bae1 (before the skeleton) and still lists the starter deletion as pending. | Low | Re-run `/sdd:survey` after this feature to map what exists, including `deploy/`. | pasichnyi |
 
 **Accepted debt (acceptable in v1, plan to fix later):**
-- <e.g. the entity is immutable / unversioned — OK for v1, may need audit versioning in v2>
+- An interruption inside the sub-second rename step can leave some pages new and some old. Every
+  page still renders and the next publish repairs it, but this narrows spec §6's "an interrupted
+  publish leaves the previous version fully served" (ADR-0003).
+- There is no automatic rollback when the post-publish check fails. The run fails and the next
+  publish repairs from the record (ADR-0003).
+- There is no local dry run against the real server. The plan is visible only through a CI run
+  (ADR-0001).
+- `.publish-record.json` and the transient `.publish-staging/` are reachable over HTTPS. Both hold
+  only the site's own public files and their names (ADR-0002, ADR-0003).
+- Review is a discipline, not a lock, while there is one maintainer, because self-approval is
+  allowed (spec §6.1, ADR-0005).
 
 ## 12. Glossary
 
