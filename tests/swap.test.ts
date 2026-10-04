@@ -207,17 +207,22 @@ describe("swap.sh", () => {
     expect(snapshot()).toEqual(before);
   });
 
-  it("prints the swap time with a decimal point whatever the locale", () => {
-    const probe = spawnSync("awk", ['BEGIN { printf "%.1f", 1.5 }'], {
+  // Shown as skipped, not passed, where no comma-decimal locale exists.
+  const hasCommaLocale =
+    spawnSync("awk", ['BEGIN { printf "%.1f", 1.5 }'], {
       encoding: "utf8",
       env: { ...process.env, LC_ALL: "sv_SE.UTF-8" },
-    });
-    if (probe.stdout !== "1,5") return; // no comma-decimal locale here
-    stage({ "index.html": "new" }, []);
+    }).stdout === "1,5";
 
-    const result = swap({ ...process.env, LC_ALL: "sv_SE.UTF-8" });
+  it.skipIf(!hasCommaLocale)(
+    "prints the swap time with a decimal point whatever the locale",
+    () => {
+      stage({ "index.html": "new" }, []);
 
-    expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/swap-seconds=\d+\.\d{3}\n$/);
-  });
+      const result = swap({ ...process.env, LC_ALL: "sv_SE.UTF-8" });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toMatch(/swap-seconds=\d+\.\d{3}\n$/);
+    },
+  );
 });

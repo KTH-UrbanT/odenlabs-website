@@ -373,6 +373,33 @@ describe("failures after the report is sealed (F-03)", () => {
     expect(files(target)).toEqual(before);
   });
 
+  it.each([
+    [3, "remote-tools-missing"],
+    [4, "upload-failed"],
+    [5, "layout-clash"],
+  ] as const)(
+    "maps a swap refusal (exit %i) to %s before the swap and leaves no staging behind",
+    async (code, check) => {
+      const before = files(target);
+      const executor = intercepting((c) =>
+        c.includes("swap.sh")
+          ? c.replace(
+              /sh \.publish-staging\/swap\/swap\.sh \./,
+              `echo 'refused: kthit.txt' >&2; exit ${code}`,
+            )
+          : null,
+      );
+
+      const result = await publish(options({ executor }));
+
+      expect(result.ok).toBe(false);
+      expect(result.report.outcome).toBe("failed-before-swap");
+      expect(result.report.failedCheck).toBe(check);
+      expect(summary).not.toContain("kthit.txt");
+      expect(files(target)).toEqual(before);
+    },
+  );
+
   it("turns a failed HTTPS request into a post-publish-check failure", async () => {
     const result = await publish(
       options({
@@ -398,21 +425,24 @@ describe("failures after the report is sealed (F-03)", () => {
     expect(encrypted.at(-1)).toMatch(/publish record.*unreadable/i);
   });
 
-  it("stops with malformed-path when the record lists a malformed owned path and deletion is on", async () => {
-    put(
-      target,
-      ".publish-record.json",
-      JSON.stringify(publishRecord({ paths: ["index.html", "../x"] })),
-    );
-    setRules({ protected: [".htaccess"], deletion: "on" });
-    const before = files(target);
+  it.each(["off", "on"] as const)(
+    "stops with malformed-path when the record lists a malformed owned path (deletion %s)",
+    async (deletion) => {
+      put(
+        target,
+        ".publish-record.json",
+        JSON.stringify(publishRecord({ paths: ["index.html", "../x"] })),
+      );
+      setRules({ protected: [".htaccess"], deletion });
+      const before = files(target);
 
-    const result = await publish(options());
+      const result = await publish(options());
 
-    expect(result.ok).toBe(false);
-    expect(result.report.failedCheck).toBe("malformed-path");
-    expect(files(target)).toEqual(before);
-  });
+      expect(result.ok).toBe(false);
+      expect(result.report.failedCheck).toBe("malformed-path");
+      expect(files(target)).toEqual(before);
+    },
+  );
 
   it("logs the fingerprint of every key the report was encrypted to", async () => {
     const lines: string[] = [];

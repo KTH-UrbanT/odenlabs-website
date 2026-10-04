@@ -111,6 +111,9 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
     writeSummary = () => {},
   } = options;
   const cd = `cd -- ${shq(targetDir)}`;
+  // Best effort: a failed discard is wiped at the start of the next publish.
+  const discardStaging = () =>
+    executor.run(`${cd} && rm -rf -- ${STAGING_DIR}`);
 
   const rules = parseRules({
     protectedText: readFileSync(
@@ -327,6 +330,7 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
       archive.stdout,
     );
     if (upload.status !== 0) {
+      discardStaging();
       return stop(
         "upload-failed",
         `uploading the build failed: ${upload.stderr.trim()}`,
@@ -338,10 +342,12 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
   }
 
   // 5. Swap into place; the script writes the record last. Exit codes 3, 4
-  //    and 5 are refusals before the first rename: the site is unchanged.
+  //    and 5 are refusals before the first rename: the site is unchanged once
+  //    the staging folder is discarded.
   const swap = executor.run(`${cd} && sh ${STAGING_DIR}/swap/swap.sh .`);
   if (swap.status !== 0) {
     const detail = swap.stderr.trim();
+    if ([3, 4, 5].includes(swap.status ?? -1)) discardStaging();
     if (swap.status === 3) {
       return stop("remote-tools-missing", detail, "failed-before-swap");
     }

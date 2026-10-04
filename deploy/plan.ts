@@ -405,14 +405,16 @@ function firstFailedCheck(
       detail: `build path and server path overlap as folder and file: ${layout}`,
     };
   }
-  if (rules.settings.deletion === "off") return null;
-
+  // A malformed record stops whatever the deletion setting: dropping it would
+  // also drop the owned leftovers it carries (data-model, carry invariant).
   if (record === null && input.recordProblem === "malformed-path") {
     return {
       failedCheck: "malformed-path",
       detail: "previous record lists a malformed path",
     };
   }
+  if (rules.settings.deletion === "off") return null;
+
   if (record === null) {
     return {
       failedCheck: "no-previous-record",

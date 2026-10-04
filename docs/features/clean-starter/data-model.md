@@ -158,14 +158,16 @@ is the AC-12 failed check `no-previous-record`.
 
 **Unreadable record** (invalid JSON, unknown `version`, a field breaking the constraints above):
 treated as **no matching record**, so with deletion on the publish stops before deleting
-(AC-12). With deletion off the publish goes ahead, writes a fresh record and reports a warning.
+(AC-12). With deletion off the publish goes ahead, writes a fresh record and reports a warning. A record
+that lists a **malformed** path is not "unreadable": it stops the publish with `malformed-path`
+whatever the deletion setting, because dropping it would also drop the owned leftovers it carries.
 
 ### `RECORDED_FILE` — element of `PUBLISH_RECORD.files`
 
 | Field | Type | Constraints | Notes |
 |---|---|---|---|
 | `path` | `string` | required, normalised server path, unique within the record | Key that `SERVER_FILE` joins on |
-| `sha256` | `string` | required, 64 lowercase hex characters | Hash of the uploaded bytes (ADR-0002). Used by the post-publish check and for repair after an interrupted swap (ADR-0003) |
+| `sha256` | `string` | required, 64 lowercase hex characters | Hash of the uploaded bytes (ADR-0002). Recorded for audit and manual repair after an interrupted swap (ADR-0003); no check reads it yet (review 2026-10-04) |
 
 **Aggregate root:** `PUBLISH_RECORD`.
 
@@ -256,7 +258,7 @@ stops before any upload (ADR-0004, Flow 5).
 | `commit` | `string` | 40 hex characters | |
 | `startedAt` | `string` | ISO 8601 UTC | |
 | `deletion` | `"on" \| "off"` | | Switch value in force for this publish |
-| `outcome` | `"in-progress" \| "published" \| "stopped" \| "failed-before-swap" \| "failed-during-swap" \| "post-check-failed"` | required | `in-progress` = the interim report sealed before upload; `stopped` = a planner guard failed and the server is untouched; `failed-before-swap` = upload or a swap pre-check failed, server untouched; `failed-during-swap` = the swap began and failed |
+| `outcome` | `"in-progress" \| "published" \| "stopped" \| "failed-before-swap" \| "failed-during-swap" \| "post-check-failed"` | required | `in-progress` = the interim report sealed before upload; `stopped` = a planner guard failed and the server is untouched; `failed-before-swap` = upload or a swap pre-check failed, live files untouched and the staging folder discarded; `failed-during-swap` = the swap began and failed |
 | `failedCheck` | `FailedCheck \| null` | set iff `outcome` is neither `published` nor `in-progress` | Closed set, below |
 | `entries` | `ReportEntry[]` | | The server listing plus outcome lists |
 | `swapSeconds` | `number \| null` | | Mixed-version window measured by `swap.sh` (≤ 5 s target) |
@@ -264,8 +266,9 @@ stops before any upload (ADR-0004, Flow 5).
 
 `FailedCheck` is a closed set: `missing-front-page`, `missing-logo`, `no-previous-record`,
 `record-without-front-page-or-logo`, `removal-limit`, `protected-clash`, `malformed-path`,
-`no-maintainer-key`, `encryption-failed`, `remote-tools-missing`, `layout-clash`, `listing-failed`, `upload-failed`, `swap-failed`,
-`post-publish-check`. The
+`no-maintainer-key`, `encryption-failed`, `remote-tools-missing`, `layout-clash`, `listing-failed`,
+`upload-failed`, `swap-failed`, `approved-in-build` (an approved removal path is also a build path;
+stops whatever the deletion setting is), `post-publish-check`. The
 **public** job summary carries only these names and counts per `ReportEntry.kind` (sad §8
 "Logging and disclosure").
 
@@ -322,7 +325,7 @@ site's file count (≈ 2,000 files at the sad §7 scaling threshold).
 | Lookup | Built from | Query it serves |
 |---|---|---|
 | set of build paths | `dist/` file list | "is this server file in the build?" (Flows 1 and 5; AC-10, AC-11b) |
-| map path → `sha256` | `PUBLISH_RECORD.files` | ownership and the post-publish hash check (ADR-0002, ADR-0003) |
+| map path → `sha256` | `PUBLISH_RECORD.files` | ownership; hashes kept for audit and manual repair (ADR-0002, ADR-0003) |
 | set of protected paths | `protected.txt` | protected-first classification (AC-11, AC-11b) |
 | set of approved paths | `approved-removals.txt` | removal eligibility and the exact-match rule (AC-01, AC-12) |
 | set of built routes | `src/pages` / `dist/` | offered sections and the AC-04 warning (Flow 3) |

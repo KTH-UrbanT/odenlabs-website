@@ -507,16 +507,19 @@ describe("planPublish: stop-guards (AC-11b, AC-12)", () => {
     });
   });
 
-  it("stops with malformed-path when the record lists a malformed owned path (deletion on)", () => {
-    const result = planPublish({
-      build,
-      listing: [...build, RECORD_FILE],
-      record: null,
-      recordProblem: "malformed-path",
-      rules: rules({ deletion: "on" }),
-    });
-    expectStop(result, "malformed-path");
-  });
+  it.each(["off", "on"] as const)(
+    "stops with malformed-path when the record lists a malformed owned path (deletion %s)",
+    (deletion) => {
+      const result = planPublish({
+        build,
+        listing: [...build, RECORD_FILE],
+        record: null,
+        recordProblem: "malformed-path",
+        rules: rules({ deletion }),
+      });
+      expectStop(result, "malformed-path");
+    },
+  );
 
   it("stops with no-previous-record for an unreadable record (deletion on)", () => {
     const result = planPublish({
