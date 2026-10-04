@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { sections } from "../src/data/sections";
 import {
   hrefToFile,
+  builtPagesFrom,
   missingPlannedPages,
   offeredSections,
+  pageToBuiltFile,
 } from "../src/lib/navigation";
 
 const planned = [
@@ -16,6 +18,46 @@ describe("hrefToFile", () => {
   it("maps a section href to its built index file", () => {
     expect(hrefToFile("/research/")).toBe("research/index.html");
     expect(hrefToFile("/a/b/")).toBe("a/b/index.html");
+  });
+});
+
+describe("pageToBuiltFile", () => {
+  it.each([
+    ["index.astro", "index.html"],
+    ["research.astro", "research/index.html"],
+    ["research.md", "research/index.html"],
+    ["research.html", "research/index.html"],
+    ["research/index.astro", "research/index.html"],
+    ["research/index.html", "research/index.html"],
+    ["people/myindex.astro", "people/myindex/index.html"],
+    ["people/reindex.md", "people/reindex/index.html"],
+    ["a/b.astro", "a/b/index.html"],
+  ])("maps %s to %s", (page, built) => {
+    expect(pageToBuiltFile(page)).toBe(built);
+  });
+
+  it("returns null for dynamic routes, whose built files are not fixed names", () => {
+    expect(pageToBuiltFile("people/[id].astro")).toBeNull();
+    expect(pageToBuiltFile("[...slug].astro")).toBeNull();
+    expect(pageToBuiltFile("[x]/index.astro")).toBeNull();
+  });
+});
+
+describe("builtPagesFrom", () => {
+  it("collects the built files of fixed-name pages and skips dynamic ones", () => {
+    expect(
+      builtPagesFrom(["index.astro", "people/[id].astro", "join.html"]),
+    ).toEqual(new Set(["index.html", "join/index.html"]));
+  });
+
+  it("feeds offeredSections the way the header does", () => {
+    const built = builtPagesFrom([
+      "index.astro",
+      "people/index.astro",
+      "research.md",
+      "404.astro",
+    ]);
+    expect(offeredSections(planned, built)).toEqual([planned[0], planned[1]]);
   });
 });
 

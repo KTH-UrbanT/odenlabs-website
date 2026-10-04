@@ -4,6 +4,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
+import { sections } from "../src/data/sections";
+import { findOffSiteRequests } from "../src/lib/offsite-requests";
 
 const dist = "dist";
 
@@ -56,5 +58,45 @@ describe("header navigation", () => {
       }
     }
     expect(dead).toEqual([]);
+  });
+});
+
+describe("header navigation (AC-03)", () => {
+  // Decided from the files in src/pages directly, not through the helper the
+  // header uses, so the header cannot pass by finding no pages at all.
+  const hasPage = (href: string) => {
+    const slug = href.replace(/^\/|\/$/g, "");
+    return ["astro", "md", "html"].some(
+      (ext) =>
+        existsSync(`src/pages/${slug}.${ext}`) ||
+        existsSync(`src/pages/${slug}/index.${ext}`),
+    );
+  };
+
+  it("offers every planned section that has a page, in planned order with its label", () => {
+    const expected = sections.filter((s) => hasPage(s.href));
+    const header =
+      /<header[\s\S]*?<\/header>/.exec(html("index.html"))?.[0] ?? "";
+    const offered = [
+      ...header.matchAll(/<a\s[^>]*href="([^"]+)"[^>]*>([^<]*)<\/a>/g),
+    ]
+      .map(([, href, label]) => ({ label: label.trim(), href }))
+      .filter((l) => sections.some((s) => s.href === l.href));
+    expect(offered).toEqual(expected);
+  });
+});
+
+describe("third-party requests (spec §6 NFR)", () => {
+  it("no built page or stylesheet requests another host", () => {
+    const config = readFileSync("astro.config.mjs", "utf8");
+    const site = /site:\s*"([^"]+)"/.exec(config)?.[1];
+    expect(site).toBeDefined();
+    const ownHost = new URL(site!).host;
+    const offenders = builtFiles()
+      .filter((f) => /\.(html|css)$/.test(f))
+      .flatMap((f) =>
+        findOffSiteRequests(html(f), ownHost).map((url) => `${f} → ${url}`),
+      );
+    expect(offenders).toEqual([]);
   });
 });

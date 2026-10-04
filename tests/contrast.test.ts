@@ -106,6 +106,61 @@ describe("checkPairs", () => {
   });
 });
 
+describe("checkPairs at the thresholds", () => {
+  // Greys whose ratio against white is just above / just below each minimum.
+  const tokens = new Map([
+    ["--bg", "#ffffff"],
+    ["--ok-body", "#767676"], // 4.54:1
+    ["--bad-body", "#777777"], // 4.48:1
+    ["--ok-large", "#949494"], // 3.03:1
+    ["--bad-large", "#959595"], // 2.99:1
+  ]);
+  const pair = (text: string, size: "body" | "large") => ({
+    name: text,
+    text,
+    background: "--bg",
+    size,
+  });
+
+  it("passes a body pair above 4.5:1 and fails one just below", () => {
+    expect(checkPairs([pair("--ok-body", "body")], tokens)).toEqual([]);
+    expect(checkPairs([pair("--bad-body", "body")], tokens)).toHaveLength(1);
+  });
+
+  it("passes a large pair above 3:1 and fails one just below", () => {
+    expect(checkPairs([pair("--ok-large", "large")], tokens)).toEqual([]);
+    expect(checkPairs([pair("--bad-large", "large")], tokens)).toHaveLength(1);
+  });
+});
+
+describe("token parsing errors", () => {
+  it("names the pair and the token when a value is not a colour", () => {
+    const tokens = new Map([
+      ["--color-text", "rgba(0,0,0,.5)"],
+      ["--color-bg", "#ffffff"],
+    ]);
+    expect(() =>
+      checkPairs(
+        [
+          {
+            name: "odd pair",
+            text: "--color-text",
+            background: "--color-bg",
+            size: "body",
+          },
+        ],
+        tokens,
+      ),
+    ).toThrow(/odd pair.*--color-text/);
+  });
+
+  it("fails on a token defined twice, naming it", () => {
+    expect(() =>
+      resolveTokens(":root { --color-a: #111111; --color-a: #222222; }"),
+    ).toThrow(/--color-a/);
+  });
+});
+
 describe("the site's declared pairs", () => {
   it("all meet the readability minimum against tokens.css", () => {
     const tokens = resolveTokens(readFileSync("src/styles/tokens.css", "utf8"));
@@ -120,6 +175,13 @@ describe("the site's declared pairs", () => {
   it("declares the pairs the site uses today, each name unique", () => {
     const names = contrastPairs.map((p) => p.name);
     expect(new Set(names).size).toBe(names.length);
-    expect(contrastPairs.length).toBeGreaterThanOrEqual(5);
+    expect(names).toEqual([
+      "body text on page",
+      "muted text on page",
+      "link on page",
+      "hovered link on page",
+      "body text on surface",
+      "heading on page",
+    ]);
   });
 });
