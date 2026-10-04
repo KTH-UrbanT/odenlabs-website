@@ -4,7 +4,7 @@ owner: "pasichnyi"
 reviewers: ["Tech Lead", "Security Lead"]
 updated_at: "2026-10-04"
 feature_size: "M"
-target_surfaces: []  # filled in §4 — subset of: backend-service | web-frontend | mobile-app | desktop-app | cli | worker | library-sdk. Read (never re-derived) by api/sequences/tasks/plan-tests/review → _shared/surfaces.md
+target_surfaces: [web-frontend, worker]  # filled in §4 — subset of: backend-service | web-frontend | mobile-app | desktop-app | cli | worker | library-sdk. Read (never re-derived) by api/sequences/tasks/plan-tests/review → _shared/surfaces.md
 ---
 
 # Software Architecture Document — clean-starter
@@ -180,9 +180,52 @@ C4Context
 
 **Top strategic choices (the seeds for ADRs):**
 
-1. **<e.g. Module isolation through events>** — <2–3 sentences citing quality goals + constraints>.
-2. **<e.g. Single-store persistence>** — <2–3 sentences>.
-3. **<e.g. Server-rendered read side>** — <2–3 sentences>.
+1. **Target surfaces: a static web frontend and a publish worker**
+   (`target_surfaces: [web-frontend, worker]`, [ADR-0001](adr/0001-build-a-static-web-frontend-and-a-separate-publish-worker.md)).
+   The visitor-facing site (front page, not-found page, navigation, identity) is one surface. The
+   guarded publish is a second one: an event-started job (a merge to `main`) with no visitors,
+   whose output is a publish report. Splitting them gives the deletion guards (AC-11 to AC-13)
+   their own domain and infra layers and their own unit and integration tests, which serves
+   quality goal 1. It also keeps site code free of server concerns.
+   - *UI architecture (web-frontend), inline:* static pre-rendered HTML with zero client-side
+     JS, inherited from repo ADR
+     [0001](../../adr/0001-build-the-site-with-astro-as-a-static-site.md). The not-found page is
+     a static `404.html` that the KTH server already serves for missing addresses. Every
+     alternative (SSR, SPA) is ruled out by that ADR and by a server that runs no code, so there
+     is no new ADR here.
+2. **Plan, then apply: a pure planner and a thin SSH executor**
+   ([ADR-0002](adr/0002-plan-each-publish-with-a-pure-planner-and-a-thin-ssh-executor.md)).
+   `planPublish()` is a pure function. It takes the build's file list, the server listing, the
+   previous publish record, the protected list, the approvals and the deletion switch, and returns
+   either a plan (upload, remove, report) or the first failed check. It never touches the network,
+   so every guard is unit-tested. The executor only applies an accepted plan, using OpenSSH tools
+   already on the runner, with no new npm package and no third-party deploy action. Ownership is
+   decided by a **publish record** (`.publish-record.json` in the target folder, written last by
+   every publish). Only files it lists, or files on the approved list, may be removed. Anything
+   else is unknown, left in place and reported. The deletion switch starts **off**, and the
+   first publish writes the first record. This serves quality goals 1 and 2.
+3. **Stage, then rename into place**
+   ([ADR-0003](adr/0003-stage-the-build-on-the-server-then-rename-it-into-place.md)). The build
+   is uploaded as one archive into a hidden staging folder inside the target folder and unpacked
+   there. One remote script then renames files into place (content-hashed assets, then pages),
+   then applies removals, then writes the new record. The slow network upload touches nothing
+   served. The swap is local renames, well under the ≤ 5 s mixed-version target, and protected
+   files are never moved or copied. A failed post-publish check fails the run without automatic
+   rollback, and the next publish repairs from the record. This serves quality goal 4 and answers
+   the spec §8 question on a single-step switch.
+4. **The private report is a GPG-encrypted artifact**
+   ([ADR-0004](adr/0004-deliver-the-publish-report-as-a-gpg-encrypted-artifact.md)). The public
+   log and job summary carry only counts and failed-check names. The full report (server listing,
+   unknown files, removed files) is encrypted on the runner to each maintainer's public key in
+   the repo and attached to the run. The repo, its logs and its artifacts are public, so
+   encryption is what makes the report maintainer-only (AC-09). No new service or secret is
+   needed.
+5. **Publishing rules are reviewed files, and the server key is usable only from `main`**
+   ([ADR-0005](adr/0005-gate-publishing-rules-by-review-and-main-only-server-secrets.md)). The
+   protected list, the approved removals and the deletion switch are files under `deploy/rules/`
+   that reach `main` only through a reviewed pull request (CODEOWNERS = maintainers). The SSH
+   secrets live in a GitHub environment that only `main` may use, so no pull-request run can
+   reach the server (AC-08, spec §6.1).
 
 Each tactical decision in later sections should trace to one of these seeds. Tactical decisions that *contradict* a strategic choice are red flags — surface them in §11.
 
