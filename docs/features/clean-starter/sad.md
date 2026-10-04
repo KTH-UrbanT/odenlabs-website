@@ -119,30 +119,55 @@ and a minimal slice of step 2 (spec §1).
      Trust boundary — the line past which you don't trust data without checking it.
      Never N/A — greenfield still draws the planned actors + external systems. -->
 
-<Business context in 2–3 sentences. What the system does for whom.>
+The Oden Lab website is the public face of a KTH research group. Visitors read it, and one
+maintainer publishes it by merging reviewed changes. The site is built and published from a public
+GitHub repository into a **shared** folder on a KTH web server, and other parties (KTH IT,
+certificate renewal, domain verification) may also write files there. The system boundary
+therefore matters at the server folder. Inside it, only files the site's own publish recorded,
+or the maintainer approved, are ours to change. Everything else is outside our trust zone and is
+left alone and reported.
 
-<!-- brownfield: <one-line scan summary> (or «N/A — greenfield repo» if no source existed) -->
+<!-- brownfield: Astro 7 static-site skeleton (dec77e0) — Base layout, Header with a static 3-item nav, Footer, tokens.css seeded from the logo + inherited blue/cyan scales, content collections with build-time integrity check, Vitest build smoke test; deploy = appleboy/scp-action copying dist/ over SSH (upload-only, never deletes). Starter files already removed from the repo by scaffold; architecture-map.md predates the skeleton (reflects 750bae1) but matches it. -->
 
 **External systems (in / out):**
 
 | Actor or system | Type | Interaction |
 |---|---|---|
-| <author role> | Person | <what they do> |
-| <external service> | System (internal/external) | <interaction> |
-| <identity provider> | System (external) | <provides auth tokens> |
+| visitor | Person | Reads pages over HTTPS; follows old or mistyped addresses; leaves via the contact route |
+| maintainer | Person | Merges reviewed changes, which publishes them; reads the maintainer-only publish report and server listing; marks protected files and approves removals as reviewed changes |
+| Non-maintainer contributor (group member or outside contributor) | Person (external) | Proposes changes, including to the publishing rules; nothing takes effect until a maintainer accepts it (AC-08) |
+| GitHub (repository, review, Actions) | System (external) | Holds the source, content and publishing rules; enforces review before `main`; runs checks and the publish job; stores the run's report |
+| KTH web server — shared server folder | System (external) | Serves the published files and the site's own not-found page; receives uploads, renames and deletions over SSH |
+| KTH IT | Person (external) | Runs the server; may place files in the shared folder that the site never published (AC-13) |
+| Search engines | System (external) | Crawl the site; must be told "not found" for addresses the site does not have (AC-02) |
+| Visitor's mail client | System (external) | Receives the front page's contact link; there is no contact form (ux-flows) |
+
+**External:** no third-party asset hosts. Fonts, styles and scripts are all served from the site
+itself (0 third-party requests per page, spec §6). This is a deliberate decision, not an omission.
 
 **C4 Context (L1):** <!-- syntax → references/c4-mermaid-syntax.md. Real names, no <placeholder> stubs. -->
 
 ```mermaid
 C4Context
-    title <feature> — System Context
+    title clean-starter — System Context
 
-    Person(actor, "<Actor role>", "<intent>")
-    System(app, "<Our system>", "<one-sentence description>")
-    System_Ext(ext, "<External system>", "<one-sentence description>")
+    Person(visitor, "Visitor", "Prospective student, funder, collaborator, peer")
+    Person(maintainer, "Maintainer", "Merges reviewed changes; decides what is protected and what is removed")
+    Person_Ext(contributor, "Non-maintainer contributor", "Group member or outside contributor; can only propose changes")
+    Person_Ext(kthit, "KTH IT", "Runs the server; may add files to the shared folder")
 
-    Rel(actor, app, "<interaction>", "<protocol>")
-    Rel(app, ext, "<interaction>", "<protocol>")
+    System(site, "Oden Lab website", "Static site plus its guarded publish pipeline")
+    System_Ext(github, "GitHub", "Repository, review and Actions runners")
+    System_Ext(server, "KTH web server", "Serves the shared server folder at oden.abe.kth.se")
+    System_Ext(search, "Search engines", "Crawl and index the site")
+
+    Rel(visitor, server, "Reads pages", "HTTPS")
+    Rel(maintainer, github, "Reviews, merges, reads the maintainer-only publish report", "HTTPS")
+    Rel(contributor, github, "Proposes changes", "HTTPS")
+    Rel(github, site, "Builds and runs the publish job")
+    Rel(site, server, "Lists the folder, uploads, removes owned files", "SSH")
+    Rel(kthit, server, "Places its own files", "out of band")
+    Rel(search, server, "Crawls; gets not-found for missing addresses", "HTTPS")
 ```
 
 ## 4. Solution strategy
