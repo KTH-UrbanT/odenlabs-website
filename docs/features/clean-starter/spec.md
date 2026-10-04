@@ -8,7 +8,7 @@ feature_size: "M"
 
 # Spec — clean-starter
 
-> **Glossary:** [CONTEXT](./CONTEXT.md) (feature terms: protected file, starter) · [root CONTEXT](../../../CONTEXT.md) (roles: maintainer, visitor)
+> **Glossary:** [CONTEXT](./CONTEXT.md) (feature terms: protected file, section, starter) · [root CONTEXT](../../../CONTEXT.md) (roles: maintainer, visitor)
 > **Reference module / docs / channels used:** None — only the interview + CONTEXT, plus the repo's own `docs/idea-brief.md`, `docs/roadmap.md`, `docs/architecture-map.md` and `.github/workflows/publish.yaml`.
 
 ## 1. Context
@@ -17,7 +17,7 @@ The group's address, oden.abe.kth.se, still serves the starter from the first at
 
 There is no external deadline. The trigger is that the skeleton exists (roadmap step 1 is the first wave and unlocks steps 2, 3, 4, 6 and 8) and that the next merge to the main line publishes it. The idea brief names stalling as the main risk, so this feature ships live rather than waiting for a complete site. It covers roadmap step 1, the starter-cleanup half of step 8 and a minimal slice of step 2, which is why it is sized M.
 
-Committed approach: go live now with a minimal, honest front page in the group's own identity, and make the live site mirror what the maintainer publishes — behind guardrails. The first publish only lists the server folder; the maintainer marks protected files and approves the starter files for removal; after that a publish removes only files the site itself published or the maintainer approved, and stops before deleting anything when the build or the target folder looks wrong; any removal above the routine limit, including the first starter cleanup, needs the maintainer to approve that exact list. Identity has a bounded definition of done — palette and type derived from the unchanged logo, readability passing, one before/after screenshot signed off — and is not a release gate. This follows the research finding that standard safe-deletion practice assumes you already know what lives on the server (here nobody does), the sharpest failure mode found (a wrong or empty target folder turning "mirror" into "wipe the account"), and the brief's success test: live, accurate, and an update takes minutes.
+Committed approach: go live now with a minimal, honest front page in the group's own identity, and make the live site mirror what the maintainer publishes — behind guardrails. Every publish uploads the build and keeps a record of the files it uploaded; until deletion is switched on, a publish also lists the server folder and deletes nothing. On that listing the maintainer marks protected files and approves the starter files for removal, and those marks are the approved list for the first cleanup — there is no second sign-off. After that a publish removes only files a previous publish recorded or the maintainer approved, and stops before deleting anything when the build or the target folder looks wrong; any removal above the routine limit, including the first starter cleanup, needs the maintainer to approve that exact list. The maintainer can switch deletion off again at any time, which returns publishing to upload-and-list. Identity has a bounded definition of done — palette and type derived from the unchanged logo, readability passing, one before/after screenshot signed off — and is not a release gate. This follows the research finding that standard safe-deletion practice assumes you already know what lives on the server (here nobody does), the sharpest failure mode found (a wrong or empty target folder turning "mirror" into "wipe the account"), and the brief's success test: live, accurate, and an update takes minutes.
 
 Traceability: KTH requires its websites to follow its accessibility, GDPR and online-publication guidelines ("Create a website at KTH", intra.kth.se); whether a self-built site on an abe.kth.se address may carry its own palette and type under the KTH graphic profile is not confirmed (see §8).
 
@@ -102,33 +102,39 @@ Traceability: KTH requires its websites to follow its accessibility, GDPR and on
 
 ### AC-03 (US-03) — happy path
 
-**Given** a section's page has been published
+**Given** a section is on the site's ordered list of planned sections and its page has been published
 **When** a visitor opens any page
-**Then** the navigation offers that section without a separate navigation edit, and sections without a page are not offered
+**Then** the navigation offers that section, in the planned order and with its planned label, without a separate navigation edit, and planned sections without a page are not offered
 
 ### AC-04 (US-03) — error
 
-**Given** a maintainer adds a navigation entry for a section that has no page
-**When** they try to publish
-**Then** publishing is blocked and the maintainer is told which navigation entry points to a missing page
+**Given** a planned section's navigation entry points to a page the build does not contain (not yet written, or a mistyped address)
+**When** the maintainer publishes
+**Then** visitors are not offered that entry, the publish goes ahead, and the maintainer is told which navigation entry points to a missing page
 
 ### AC-05 (US-04) — happy path
 
 **Given** the palette and type derived from the logo are in place
 **When** a visitor opens the front page or the not-found page
-**Then** both show the unchanged logo with the group's palette and type applied consistently, matching the before/after screenshot the maintainer signed off
+**Then** both show the unchanged logo with the group's palette and type applied consistently, matching the before/after screenshot the maintainer signed off; that sign-off is a one-time manual acceptance — it never blocks a later publish, and later palette edits may change the look
 
 ### AC-06 (US-04) — domain invariant: all text is readable
 
 **Given** a maintainer changes a colour in the palette
-**When** the change would make any text and background pair fall below the readability minimum
+**When** the change would make any text and background pairing the site uses (as declared alongside the palette) fall below the readability minimum
 **Then** publishing is blocked and the maintainer is told which pair fails the "all text is readable" rule
 
 ### AC-07 (US-05) — happy path
 
 **Given** deletion has not yet been switched on
 **When** the maintainer publishes
-**Then** nothing on the server is deleted, and the maintainer receives a listing of every server-folder file the build does not contain, to mark each as protected or approve it for removal
+**Then** the build is uploaded, nothing on the server is deleted, and the maintainers receive, through a maintainer-only route, a listing of every server-folder file the build does not contain, to mark each as protected or approve it for removal
+
+### AC-07b (US-05) — happy path
+
+**Given** deletion is switched on
+**When** a maintainer switches it off and publishes
+**Then** the publish behaves as in AC-07: the build is uploaded, nothing is deleted and the listing is produced
 
 ### AC-08 (US-05) — authorization
 
@@ -139,7 +145,7 @@ Traceability: KTH requires its websites to follow its accessibility, GDPR and on
 ### AC-09 (US-05) — authorization
 
 **Given** a server-folder listing has been produced
-**When** a visitor or another non-maintainer looks at the project's public pages and records
+**When** a visitor or another non-maintainer looks at the project's public pages, records and publish logs
 **Then** they cannot see the listing; only maintainers can, because it reveals the layout of a shared university server
 
 ### AC-10 (US-06) — happy path
@@ -154,9 +160,15 @@ Traceability: KTH requires its websites to follow its accessibility, GDPR and on
 **When** any publish runs
 **Then** the file is left unchanged
 
+### AC-11b (US-06) — error
+
+**Given** the build contains a file at the same address as a protected file
+**When** the maintainer publishes
+**Then** the publish stops before changing anything on the server and tells the maintainer which file clashes with a protected file
+
 ### AC-12 (US-06) — error
 
-**Given** the build is missing the front page or the logo, or the target folder does not contain the site's previously published files, or the publish would remove more files than the routine removal limit without the maintainer having approved that exact list
+**Given** the build is missing the front page or the logo, or the target folder does not contain the previous publish's record together with the front page and logo that record lists, or the publish would remove more files than the routine removal limit without the maintainer having approved that exact list (an approval of a list that differs by even one file does not count)
 **When** the maintainer publishes
 **Then** the publish stops before deleting anything and tells the maintainer which check failed
 
@@ -164,7 +176,7 @@ Traceability: KTH requires its websites to follow its accessibility, GDPR and on
 
 **Given** a file appears in the server folder that the site never published and the maintainer never reviewed, such as one added by KTH IT
 **When** the maintainer publishes
-**Then** the file is left in place and reported to the maintainer for a keep-or-remove decision
+**Then** the file is left in place, the publish goes ahead, and the file is reported to the maintainers for a keep-or-remove decision — on every publish until it is marked protected or approved for removal
 
 ### AC-14 (US-07) — happy path
 
@@ -182,23 +194,23 @@ Traceability: KTH requires its websites to follow its accessibility, GDPR and on
 
 | Aspect | Target | Measurement |
 |---|---|---|
-| Text readability | ≥ 4.5:1 contrast for body text; ≥ 3:1 for large text and UI elements (WCAG 2.1 AA) | automated check of every text/background token pair in the test suite |
+| Text readability | ≥ 4.5:1 contrast for body text; ≥ 3:1 for large text and UI elements (WCAG 2.1 AA) | automated check, in the test suite, of every text/background pairing the site uses, as declared alongside the palette |
 | Third-party requests | 0 per page — fonts, styles and scripts all served from the site itself | build-time scan of built pages for off-site asset references |
 | Merge-to-live time | ≤ 10 min | CI run duration from merge to publish complete |
-| Mixed-version window | ≤ 5 s in which a visitor can receive a mix of old and new files; an interrupted publish leaves the previous version fully served | publish log timestamps + post-publish check of front page and logo |
+| Mixed-version window | ≤ 5 s in which a visitor can receive a mix of old and new files; an interrupted publish leaves the previous version fully served | publish log timestamps + post-publish check of front page and logo (feasibility open — see §8) |
 | Routine removal limit | ≤ 20 files removed per publish without a maintainer-approved list | publish guard; count shown in the removal report |
 | Old starter addresses | 100% of the reviewed starter addresses show the not-found page and signal not-found | post-publish check against the reviewed listing |
 | Font payload | ≤ 100 KB of font files per page | build output size check |
 
 ## 6.1 Security / privacy
 
-- **Data classification:** public — everything published is meant for any visitor; the server-folder listing and the protected-file list are internal, because they describe a shared university server.
+- **Data classification:** public — everything published is meant for any visitor; the protected-file list, the removal approvals and the deletion switch are also public, because they live in the project's public repository as reviewed changes and hold only file names. The server-folder listing is internal, because it describes a shared university server, and never appears in public publish logs.
 - **Personal data touched:** the front-page contact route (a group or maintainer contact, published deliberately). No visitor data is collected; serving fonts from the site itself keeps visitors' addresses away from third parties.
-- **AuthZ/AuthN impact:** only maintainers may change the protected-file list, approve removals or switch deletion on; the server-folder listing is readable only by maintainers. Proposed changes from anyone else take effect only after a maintainer accepts them.
+- **AuthZ/AuthN impact:** only maintainers may change the protected-file list, approve removals or switch deletion on; the server-folder listing is readable only by maintainers. Proposed changes from anyone else take effect only after a maintainer accepts them. Listings and removal reports go to every maintainer through a maintainer-only route; a maintainer may approve removals in their own change (there is one maintainer today).
 - **Abuse cases:**
   - Wrong or empty target folder (misconfigured publish destination): the publish refuses to delete when the folder does not contain the site's previously published files, and never removes more than the routine limit without an approved list — blast radius capped before anything is lost.
-  - Protected-list drift (files added to the folder after the review, e.g. certificate renewal or access rules): unknown files are never deleted silently; they are reported for a keep-or-remove decision.
-  - Listing leak through public project records: the listing is delivered only to maintainers, never into publicly readable output.
+  - Protected-list drift (files added to the folder after the review, e.g. certificate renewal or access rules): unknown files are never deleted silently and never block a publish; they are reported on every publish until a keep-or-remove decision is made.
+  - Listing leak through public project records: the listing is delivered only to maintainers, never into publicly readable output such as publish logs.
   - A contribution from a non-maintainer that changes the publishing rules: it takes effect only after a maintainer accepts it, and checks run on proposed changes without access to the server.
   - Visitor tracking through third-party fonts or assets: zero third-party requests per page.
 - **Security review:** Required — this is the first time a publish deletes files on a shared university server.
@@ -217,4 +229,5 @@ Traceability: KTH requires its websites to follow its accessibility, GDPR and on
 - [ ] Does the KTH server show the site's own not-found page and signal not-found for missing addresses? Default now: assume yes; if not, ask KTH IT to enable it. — owner: pasichnyi, due: before sdd:design
 - [ ] Who besides the maintainer writes to the server folder (KTH IT, certificate renewal, verification files)? Default now: nobody — the first listing (AC-07) is the evidence. — owner: pasichnyi, due: before deletion is switched on
 - [ ] Who holds the rights to the repository's code and content once the licence file is gone (the maintainer, the group, KTH)? Default now: all rights reserved, held by the group. — owner: pasichnyi, due: 2026-10-31
+- [ ] Can the KTH server switch from the old version of the site to the new one in a single step, and must protected files stay untouched or may they be carried into the new version? Default now: files are copied one by one and protected files stay untouched; the ≤ 5 s mixed-version target stands until design shows it cannot be met. — owner: pasichnyi, due: before sdd:design
 - [ ] Front-page copy: the who-we-are paragraph and the contact route (US-08). Default now: none — the maintainer writes it. — owner: pasichnyi, due: before sdd:implement
