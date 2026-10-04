@@ -1,0 +1,4 @@
+# Maintainers own the publishing rules, the publish worker and the workflow
+# (ADR-0005). Branch protection must require their review for these paths.
+/deploy/   @pasichnyi
+/.github/  @pasichnyi
