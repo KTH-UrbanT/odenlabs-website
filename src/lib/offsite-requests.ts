@@ -16,11 +16,34 @@ function isOffSite(url: string, ownHost: string): boolean {
   }
 }
 
+// HTML character references that can appear in attribute values and inline
+// style text. Astro writes the quotes inside a `style` attribute as `&quot;`,
+// so `url(&quot;https://…&quot;)` must be read as `url("https://…")`.
+const NAMED: Record<string, string> = {
+  quot: '"',
+  apos: "'",
+  amp: "&",
+  lt: "<",
+  gt: ">",
+};
+function decodeEntities(text: string): string {
+  return text.replace(
+    /&(?:#(\d+)|#x([0-9a-f]+)|([a-z]+));/gi,
+    (ref, dec?: string, hex?: string, name?: string) => {
+      if (dec || hex) {
+        const code = dec ? Number(dec) : parseInt(hex!, 16);
+        return code <= 0x10ffff ? String.fromCodePoint(code) : ref;
+      }
+      return NAMED[name!.toLowerCase()] ?? ref;
+    },
+  );
+}
+
 // One attribute value, double-quoted, single-quoted or unquoted.
 const value = String.raw`\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))`;
 const attr = (name: string, flags = "i") =>
   new RegExp(String.raw`(?:^|\s)${name}` + value, flags);
-const valueOf = (m: RegExpMatchArray) => m[1] ?? m[2] ?? m[3];
+const valueOf = (m: RegExpMatchArray) => decodeEntities(m[1] ?? m[2] ?? m[3]);
 
 /** Every off-site URL that `source` (HTML or CSS) makes the browser request. */
 export function findOffSiteRequests(source: string, ownHost: string): string[] {
@@ -46,12 +69,12 @@ export function findOffSiteRequests(source: string, ownHost: string): string[] {
     for (const candidate of valueOf(m).split(","))
       add(candidate.trim().split(/\s+/)[0]);
   }
-  for (const [, url] of source.matchAll(
-    /url\(\s*["']?([^"')]*?)["']?\s*\)/gi,
-  )) {
+  // Decoded, so entity-encoded quotes in `style` attributes are seen as quotes.
+  const text = decodeEntities(source);
+  for (const [, url] of text.matchAll(/url\(\s*["']?([^"')]*?)["']?\s*\)/gi)) {
     add(url);
   }
-  for (const [, url] of source.matchAll(/@import\s+["']([^"']+)["']/gi)) {
+  for (const [, url] of text.matchAll(/@import\s+["']([^"']+)["']/gi)) {
     add(url);
   }
   return found;

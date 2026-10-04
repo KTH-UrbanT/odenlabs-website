@@ -55,6 +55,37 @@ describe("findOffSiteRequests", () => {
     ]);
   });
 
+  it("reports an entity-encoded url() in a style attribute, as Astro emits it", () => {
+    const html = `
+      <div style="background-image:url(&quot;https://bg.example.com/z.jpg&quot;)"></div>
+      <div style="background:url(&#34;https://a.example.com/a.png&#34;)"></div>
+      <div style="background:url(&#39;https://b.example.com/b.png&#39;)"></div>
+      <div style="background:url(&apos;https://c.example.com/c.png&apos;)"></div>`;
+    expect(findOffSiteRequests(html, own).sort()).toEqual(
+      [
+        "https://bg.example.com/z.jpg",
+        "https://a.example.com/a.png",
+        "https://b.example.com/b.png",
+        "https://c.example.com/c.png",
+      ].sort(),
+    );
+  });
+
+  it("decodes &amp; in attribute values before reporting", () => {
+    const html = '<img src="https://img.example.com/p.png?a=1&amp;b=2">';
+    expect(findOffSiteRequests(html, own)).toEqual([
+      "https://img.example.com/p.png?a=1&b=2",
+    ]);
+  });
+
+  it("allows an entity-encoded own-host or relative url()", () => {
+    const html = `
+      <div style="background-image:url(&quot;/bg.jpg&quot;)"></div>
+      <div style="background-image:url(&quot;https://oden.abe.kth.se/bg.jpg&quot;)"></div>
+      <div style="background-image:url(&#39;img/bg.jpg&#39;)"></div>`;
+    expect(findOffSiteRequests(html, own)).toEqual([]);
+  });
+
   it("allows own-host, relative and data URLs, plain links and mailto", () => {
     const html = `
       <link rel="stylesheet" href="/a.css">
