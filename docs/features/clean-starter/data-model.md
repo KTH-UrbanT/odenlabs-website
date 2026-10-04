@@ -202,7 +202,7 @@ never published"), so the maintainer sees it. It is not a stop, so it cannot tri
 false-alarm KPI (spec §7). Decided by the maintainer on 2026-10-04 during `tasks`.
 
 **Layout clash** (AC-13b, review 2026-10-04): the table compares exact paths. Any listed path
-(protected, owned or unknown) that is a strict parent or child of a build path, for example a
+(protected, owned, approved or unknown) that is a strict parent or child of a build path, for example a
 listed file `x/y` when the build writes a file `x`, stops the publish with `layout-clash` before
 any change, whatever the deletion setting. The swap script repeats the check on the server and
 also refuses a folder at a build file's address or a link on the way to one. The file in the way

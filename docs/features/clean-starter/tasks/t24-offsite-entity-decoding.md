@@ -23,6 +23,9 @@ Astro writes the quotes inside a `style` attribute as `&quot;`, so the built pag
 `src/lib/offsite-requests.ts:49-53` captures `&quot;https://…&quot;`, which fails the `^(https?:)?//` test in
 `isOffSite` (line 11), so the guard returns `[]` for a live third-party request.
 
+Traceability note (review 2026-10-04, 3rd pass, F-4): the code commit for this task, `04b4222`,
+carries no `SDD-Task: T24` trailer; the follow-up `720d562` does. History is not rewritten.
+
 ## Checklist
 
 - [x] Decode HTML entities in attribute values and inline style text before matching (at least `&quot;`, `&#34;`, `&#39;`, `&apos;`, `&amp;`).

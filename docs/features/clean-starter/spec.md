@@ -178,9 +178,9 @@ Traceability: KTH requires its websites to follow its accessibility, GDPR and on
 **When** the maintainer publishes
 **Then** the file is left in place, the publish goes ahead (unless the file is in the way of the build — AC-13b), and the file is reported to the maintainers for a keep-or-remove decision — on every publish until it is marked protected or approved for removal
 
-### AC-13b (US-06) — error <!-- added-by-fix: review 2026-10-04 (2nd pass), R-03 -->
+### AC-13b (US-06) — error <!-- added-by-fix: review 2026-10-04 (2nd pass), R-03; scope widened to every listed path in review 2026-10-04 (3rd pass), F-3 -->
 
-**Given** a file or folder in the server folder that the site does not own (unknown or protected) occupies an address the build needs — it sits where the build writes a file of the same name as a folder, or inside a folder the build writes as a file, or a parent on the way is a link
+**Given** a listed file or folder in the server folder (unknown, protected, owned or approved) occupies an address the build needs — it sits where the build writes a file of the same name as a folder, or inside a folder the build writes as a file, or a parent on the way is a link
 **When** the maintainer publishes
 **Then** the publish stops before any change and tells the maintainer which check failed (`layout-clash`) and which path is in the way; the file itself is left untouched
 

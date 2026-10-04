@@ -3,7 +3,7 @@ id: T16
 title: "Stop a publish when the server's folder layout conflicts with the build"
 layer: "domain"
 deps: ["T10", "T11"]
-acs: ["AC-11", "AC-13"]
+acs: ["AC-11", "AC-13", "AC-13b"]
 files_hint:
   [
     "deploy/plan.ts",

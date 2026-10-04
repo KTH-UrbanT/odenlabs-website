@@ -285,7 +285,8 @@
       ],
       "acs": [
         "AC-11",
-        "AC-13"
+        "AC-13",
+        "AC-13b"
       ],
       "dod": "planner stops with a named check on any parent/child clash; swap.sh refuses a folder target or a symlinked parent; new plan.test and swap.test cases fail before the fix and pass after",
       "files_hint": [
