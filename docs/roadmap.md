@@ -19,7 +19,7 @@ A small English-only site with the research group's own identity is live at KTH,
 
 | # | Step | Source | Size | Status |
 |---|---|---|:---:|---|
-| 1 | Clean the starter and set the group's identity (demo content gone, logo/theme kept or restyled) | idea-brief.md §1 Raw idea; §8 Open questions | M | idea |
+| 1 | Set the group's identity on the new skeleton (restyle logo and theme; skeleton itself comes from `/sdd:scaffold`) | idea-brief.md §1 Raw idea; §8 Open questions | M | idea |
 | 2 | Front page "who we are" with equal paths to Research, People and Join/Contact | idea-brief.md §7 Recommendation | M | idea |
 | 3 | People pages: members and bios | idea-brief.md §7 Recommendation | M | idea |
 | 4 | Join / Contact page | idea-brief.md §7 Recommendation | S | idea |
@@ -51,12 +51,12 @@ A small English-only site with the research group's own identity is live at KTH,
 | D2 | Which source feeds publications, and is its data good enough? | research | agent | 7 |
 | D3 | Who owns the KTH virtual server, and is oden.abe.kth.se the final domain? | grilling | human | 8 |
 | D4 | Where does the first batch of real content (bios, photos) come from, given members must supply some? | grilling | human | 3 |
-| D6 | Keep Hugo (with or without the HugoBlox theme) or switch to another static site generator? | grilling | human | 1 |
 
 ## Decisions so far
 
 - English-only, single maintainer, hosted at KTH, built around research themes → [`idea-brief.md §7`](idea-brief.md)
 - Blog, second language, member editing, internal area and full KTH branding are out → [`idea-brief.md §5`](idea-brief.md)
+- Site is rebuilt on Astro (static), content as typed files in git, plain CSS tokens; HugoBlox starter removed by `/sdd:scaffold` (D6, 2026-10-04) → [`architecture-map.md`](architecture-map.md), [`adr/`](adr/)
 - Logo and blue theme are restyled, not replaced (D5, 2026-10-04)
 - Hosting is oden.abe.kth.se via GitHub Actions SSH copy, all four secrets set; recon done → [`.github/workflows/publish.yaml`](../.github/workflows/publish.yaml), [`config/_default/hugo.yaml`](../config/_default/hugo.yaml)
 
@@ -76,14 +76,14 @@ flowchart LR
 
 ## Execution path
 
-Fog steps (5, 7) have no wave; their recon passes run alongside. Hosting recon is done; step 1 waits only on D6 (which generator to build on).
+Fog steps (5, 7) have no wave; their recon passes run alongside. Hosting recon is done and D6 is decided; step 1 starts once `/sdd:scaffold` has built the skeleton.
 
 | Wave | Steps | Zone per step (why parallel-safe) | Unlocks |
 |:---:|---|---|---|
-| 1 | 1 | 1: `config/_default`, `assets`, demo content under `content/` | 2, 3, 4, 6, 8 |
-| 2 | 3 ∥ 4 | 3: `content/people`, `content/authors` · 4: `content/contact` (disjoint) | 2 |
-| 3 | 2 | 2: `content/_index.md` | — |
-| 4 | 6 ∥ 8 | 6: `content/project` (new) — after recon of step 5 · 8: `.github/workflows` (disjoint) | — |
+| 1 | 1 | 1: `src/styles`, `src/layouts`, `src/components`, `public/` | 2, 3, 4, 6, 8 |
+| 2 | 3 ∥ 4 | 3: `src/content/people`, `src/pages/people` · 4: `src/pages/join` (disjoint) | 2 |
+| 3 | 2 | 2: `src/pages/index.astro` | — |
+| 4 | 6 ∥ 8 | 6: `src/content/projects`, `src/pages/projects` — after recon of step 5 · 8: `.github/workflows` (disjoint) | — |
 
 ## Shipped
 
