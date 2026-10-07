@@ -7,7 +7,7 @@ acs: []
 files_hint: ["src/lib/offsite-requests.ts", "tests/offsite-requests.test.ts"]
 owner: "pasichnyi"
 source: "review-2026-10-05-5 F5-01, F5-02, F5-03, F5-04, F5-05"
-status: "todo"
+status: "done"
 ---
 
 <!-- To the executing agent: work from what is inlined here. If a slice is insufficient,

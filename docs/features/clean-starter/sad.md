@@ -489,7 +489,7 @@ sequenceDiagram
     PJ->>PJ: Checks idempotency by planning from the record, so a re-run of the same commit adds no new change
     PJ->>PJ: Plans upload only with zero removals
     PJ->>PJ: Sorts every folder file the build lacks into protected, approved or unknown
-    alt A build file sits at a protected file's address, or a listed file is in the way of an address the build needs (AC-13b)
+    alt A build path is malformed, a build file sits at a protected file's address or is also approved for removal (approved-in-build), a listed file is in the way of an address the build needs (AC-13b), or the previous record lists a malformed path (all stop whatever the deletion setting)
         PJ->>RP: Writes the failed check and the listing, encrypted
         PJ-->>GH: Fails the run, server untouched
         GH-->>M: Notifies the failed run

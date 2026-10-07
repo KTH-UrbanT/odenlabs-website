@@ -7,7 +7,7 @@ acs: ["AC-12"]
 files_hint: ["docs/features/clean-starter/ux-flows.md", "docs/features/clean-starter/sad.md"]
 owner: "pasichnyi"
 source: "review-2026-10-05-5 F5-06"
-status: "todo"
+status: "done"
 ---
 
 <!-- To the executing agent: work from what is inlined here. If a slice is insufficient,

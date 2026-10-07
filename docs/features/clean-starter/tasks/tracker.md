@@ -35,8 +35,8 @@
 | T28 | Docs sync: AC-13b in ux-flows, AC-13b scope, traceability (review F-1, F-3, F-4)             | docs   | pasichnyi | S        | —                   | done    |
 | T29 | Off-site guard: quote-aware tag scan, legacy entities, linear url() (review R4-01–04, R4-07)  | tests  | pasichnyi | M        | T27                 | done    |
 | T30 | US-06 check order in ux-flows, AC-13b approved case (review R4-05, R4-06)                    | docs   | pasichnyi | S        | —                   | done    |
-| T31 | Off-site guard: additive decoding, one attribute reader, regions (review F5-01–F5-05)         | tests  | pasichnyi | M        | T29                 | todo    |
-| T32 | US-06 malformed-path, sad Flow 5 deletion-off stops (review F5-06)                            | docs   | pasichnyi | S        | —                   | todo    |
+| T31 | Off-site guard: additive decoding, one attribute reader, regions (review F5-01–F5-05)         | tests  | pasichnyi | M        | T29                 | done    |
+| T32 | US-06 malformed-path, sad Flow 5 deletion-off stops (review F5-06)                            | docs   | pasichnyi | S        | —                   | done    |
 
 **Total:** 32 tasks, ~14.6 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 
@@ -51,3 +51,5 @@ before/after sign-off. T7 waits for T6.
 **Review follow-ups, 3rd pass (2026-10-04):** T27–T28 done; R3-05 deferred and R3-03 dismissed (spec §8, review record).
 
 **Review follow-ups, 4th pass (2026-10-04):** T29–T30 done; the embedded tab/newline case joins R-09 in spec §8.
+
+**Review follow-ups, 5th pass (2026-10-05):** T31–T32 done; F5-01 to F5-06 closed pending the sixth pass.

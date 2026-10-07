@@ -64,14 +64,10 @@ function decodeEntities(text: string, inAttribute: boolean): string {
   );
 }
 
-// One attribute value, double-quoted, single-quoted or unquoted.
-const value = String.raw`\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))`;
-const attr = (name: string, flags = "i") =>
-  new RegExp(String.raw`(?:^|\s)${name}` + value, flags);
-const valueOf = (m: RegExpMatchArray) =>
-  decodeEntities(m[1] ?? m[2] ?? m[3], true);
-
-// Elements whose text the browser reads as written, outside SVG.
+// Elements whose text the browser does not parse as tags: raw text (`script`,
+// `style`, `xmp`, `iframe`, `noembed`, `noframes`) and RCDATA (`textarea`,
+// `title`). `noscript` is not here: with scripting off, which is how a visitor
+// may see the page, its content is markup.
 const RAW_TEXT = new Set([
   "script",
   "style",
@@ -81,47 +77,78 @@ const RAW_TEXT = new Set([
   "iframe",
   "noembed",
   "noframes",
-  "noscript",
 ]);
 
-// Rewrites `html` the way the browser reads it for requests: every attribute
-// value is decoded (`style`, but also SVG `mask`, `filter`, `fill`…), and so
-// is the text of a `<style>` inside inline SVG, which the browser parses as
-// markup. Page text, comments and raw-text elements (plain `<style>`,
-// `<script>`) are left as written: the browser doesn't decode them, and
-// decoding prose would report it as requests.
+interface Tag {
+  name: string;
+  attrs: [name: string, value: string][];
+}
+
+// Reads `html` once, the way the browser does, and returns what the scans in
+// `findOffSiteRequests` need:
+//   - `tags`: every start tag with its attribute names (lower case) and decoded
+//     values, so `src`, `srcset`, `poster`, `<link>` and `<image>`/`<use>` are
+//     all read by one attribute parser;
+//   - `decoded`: every decoded attribute value (`style`, but also SVG `mask`,
+//     `filter`, `fill`…) and the decoded text of a `<style>` inside inline
+//     SVG, which the browser parses as markup. It is added to the source, never
+//     substituted for it, so a wrong reading here can only add a report.
+// Page text, comments and raw-text elements are not decoded: the browser doesn't
+// decode them, and decoding prose would report it as requests.
 //
-// One forward pass. A tag runs to the first `>` outside quotes, so a raw `<`
-// or `</svg>` inside a value (Astro keeps both raw in expression attributes)
-// does not end it. A quote still open at the end of the input stops the scan,
-// and every search moves forward, so a malformed page can't make it quadratic.
-function decodeMarkup(html: string): string {
-  const lower = html.toLowerCase();
-  let out = "";
+// One forward pass. A tag runs to the first `>` outside quotes, so a raw `<`,
+// `>` or `</svg>` inside a value (Astro keeps all three raw in expression
+// attributes) does not end it. A quote still open at the end of the input stops
+// the scan, and every search moves forward, so a malformed page can't make it
+// quadratic.
+function readMarkup(html: string): { tags: Tag[]; decoded: string[] } {
+  const tags: Tag[] = [];
+  const decoded: string[] = [];
   let i = 0;
   let svgDepth = 0;
-  const copyTo = (end: number) => {
-    out += html.slice(i, end);
-    i = end;
+  // First match of `pattern` (a global regex) at or after `from`, or -1.
+  const find = (pattern: RegExp, from: number) => {
+    pattern.lastIndex = from;
+    const m = pattern.exec(html);
+    return m ? m.index + m[0].length : -1;
+  };
+  const endOfComment = (from: number) => {
+    if (html.startsWith(">", from)) return from + 1; // <!-->
+    if (html.startsWith("->", from)) return from + 2; // <!--->
+    const end = find(/--!?>/g, from);
+    return end === -1 ? html.length : end;
+  };
+  const afterNext = (char: string, from: number) => {
+    const at = html.indexOf(char, from);
+    return at === -1 ? html.length : at + 1;
   };
   for (;;) {
     const lt = html.indexOf("<", i);
     if (lt === -1) break;
-    copyTo(lt);
+    i = lt;
     if (html.startsWith("<!--", i)) {
-      const close = html.indexOf("-->", i + 4);
-      copyTo(close === -1 ? html.length : close + 3);
+      i = endOfComment(i + 4);
+      continue;
+    }
+    if (html.startsWith("<![CDATA[", i) && svgDepth > 0) {
+      const end = find(/\]\]>/g, i + 9);
+      i = end === -1 ? html.length : end;
+      continue;
+    }
+    // A bogus comment (`<!…`, `<?…`, `</` + a non-letter) ends at the next `>`.
+    if (/^<(?:[!?]|\/(?![a-z]))/i.test(html.slice(i, i + 3))) {
+      i = afterNext(">", i + 2);
       continue;
     }
     const head = /^<(\/?)([a-z][^\s/>]*)/i.exec(html.slice(i, i + 64));
     if (!head) {
-      copyTo(i + 1);
+      i += 1;
       continue;
     }
     const [, closing, rawName] = head;
     const name = rawName.toLowerCase();
-    let tag = head[0];
-    let j = i + tag.length;
+    const attrs: [string, string][] = [];
+    let j = i + head[0].length;
     // Attributes, separated by whitespace or `/`, up to `>`.
     for (;;) {
       while (j < html.length && /[\s/]/.test(html[j])) j++;
@@ -129,17 +156,20 @@ function decodeMarkup(html: string): string {
       const nameStart = j;
       while (j < html.length && !/[\s/>=]/.test(html[j])) j++;
       if (j === nameStart) j++; // a stray `=` where a name starts
-      tag += ` ${html.slice(nameStart, j)}`;
+      const attrName = html.slice(nameStart, j).toLowerCase();
       let k = j;
       while (k < html.length && /\s/.test(html[k])) k++;
-      if (html[k] !== "=") continue;
+      if (html[k] !== "=") {
+        attrs.push([attrName, ""]);
+        continue;
+      }
       k++;
       while (k < html.length && /\s/.test(html[k])) k++;
       let valueEnd: number;
       let raw: string;
       if (html[k] === '"' || html[k] === "'") {
         const close = html.indexOf(html[k], k + 1);
-        if (close === -1) return out + html.slice(i);
+        if (close === -1) return { tags, decoded };
         raw = html.slice(k + 1, close);
         valueEnd = close + 1;
       } else {
@@ -148,63 +178,70 @@ function decodeMarkup(html: string): string {
           valueEnd++;
         raw = html.slice(k, valueEnd);
       }
-      tag += `="${decodeEntities(raw, true)}"`;
+      const value = decodeEntities(raw, true);
+      attrs.push([attrName, value]);
+      decoded.push(value);
       j = valueEnd;
     }
-    out += tag + ">";
     i = Math.min(j + 1, html.length);
+    if (!closing) tags.push({ name, attrs });
     if (name === "svg") {
       svgDepth = Math.max(0, svgDepth + (closing ? -1 : 1));
       continue;
     }
     if (closing) continue;
     if (svgDepth > 0 && name === "style") {
-      const end = lower.indexOf("</style", i);
-      if (end === -1) break;
-      out += decodeEntities(html.slice(i, end), false);
+      // The text runs to `</style`, or, with none, to the end of the SVG.
+      let end = find(/<\/style(?=[\s/>])/gi, i);
+      if (end !== -1) end -= "</style".length;
+      else end = html.indexOf("</svg", i);
+      if (end === -1) end = html.length;
+      decoded.push(decodeEntities(html.slice(i, end), false));
       i = end;
     } else if (svgDepth === 0 && RAW_TEXT.has(name)) {
-      const end = lower.indexOf(`</${name}`, i);
-      copyTo(end === -1 ? html.length : end);
+      const end = find(new RegExp(`</${name}(?=[\\s/>])`, "gi"), i);
+      i = end === -1 ? html.length : end - `</${name}`.length;
     }
   }
-  return out + html.slice(i);
+  return { tags, decoded };
 }
 
 /** Every off-site URL that `source` (HTML or CSS) makes the browser request. */
 export function findOffSiteRequests(source: string, ownHost: string): string[] {
-  const found: string[] = [];
+  const found = new Set<string>();
   const add = (url: string) => {
-    if (isOffSite(url, ownHost)) found.push(url.trim());
+    if (isOffSite(url, ownHost)) found.add(url.trim());
   };
 
-  for (const [, attrs] of source.matchAll(/<link\s([^>]*)>/gi)) {
-    const rel = attrs.match(attr("rel"));
-    const href = attrs.match(attr("href"));
-    if (href && FETCHING_REL.test(rel ? valueOf(rel) : "")) add(valueOf(href));
+  const { tags, decoded } = readMarkup(source);
+  for (const { name, attrs } of tags) {
+    const get = (...names: string[]) =>
+      attrs.filter(([n]) => names.includes(n)).map(([, v]) => v);
+    for (const v of get("src", "poster")) add(v);
+    for (const v of get("srcset")) {
+      for (const candidate of v.split(","))
+        add(candidate.trim().split(/\s+/)[0]);
+    }
+    if (name === "link" && get("rel").some((v) => FETCHING_REL.test(v))) {
+      for (const v of get("href")) add(v);
+    }
+    // `href` on SVG <image> and <use> loads a resource.
+    if (name === "image" || name === "use") {
+      for (const v of get("href", "xlink:href")) add(v);
+    }
   }
-  // `href` on SVG <image> and <use> loads a resource.
-  for (const [, attrs] of source.matchAll(/<(?:image|use)\s([^>]*)>/gi)) {
-    const href = attrs.match(attr("(?:xlink:)?href"));
-    if (href) add(valueOf(href));
-  }
-  for (const name of ["src", "poster"]) {
-    for (const m of source.matchAll(attr(name, "gi"))) add(valueOf(m));
-  }
-  for (const m of source.matchAll(attr("srcset", "gi"))) {
-    for (const candidate of valueOf(m).split(","))
-      add(candidate.trim().split(/\s+/)[0]);
-  }
-  const text = decodeMarkup(source);
-  // A quoted or unquoted url(); no part can match the same text twice, so a
-  // malformed page can't make the scan quadratic.
+
+  // The source as written (CSS, a plain `<style>`) plus the decoded values.
+  const text = `${source}\n${decoded.join("\n")}`;
+  // A quoted or unquoted url(), `\` escapes included; no part can match the
+  // same text twice, so a malformed page can't make the scan quadratic.
   for (const [, dq, sq, bare] of text.matchAll(
-    /url\(\s*(?:"([^"]*)"|'([^']*)'|([^"'()\s]+))\s*\)/gi,
+    /url\(\s*(?:"([^"]*)"|'([^']*)'|((?:[^"'()\s\\]|\\.)+))\s*\)/gi,
   )) {
     add(dq ?? sq ?? bare);
   }
   for (const [, url] of text.matchAll(/@import\s+["']([^"']+)["']/gi)) {
     add(url);
   }
-  return found;
+  return [...found];
 }

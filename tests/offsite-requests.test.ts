@@ -251,4 +251,226 @@ describe("findOffSiteRequests", () => {
       <style>.x { background: url(/p.png) }</style>`;
     expect(findOffSiteRequests(html, own)).toEqual([]);
   });
+
+  // T31 (review 2026-10-05 pass 5, F5-01 to F5-05).
+  const D = `<div style="background:url(&quot;https://x.example.com/a&quot;)"></div>`;
+  const X = "https://x.example.com/a";
+
+  describe("built CSS read as markup (F5-01)", () => {
+    it("reports an off-site url() after a minified range query", () => {
+      const css =
+        "@media (40rem<width<60rem){.b{color:red}}.hero{background:url(//cdn.example.com/hero.jpg)}";
+      expect(findOffSiteRequests(css, own)).toEqual([
+        "//cdn.example.com/hero.jpg",
+      ]);
+    });
+
+    it("reports an @import after a minified range query", () => {
+      const css = `@media (40rem<width<60rem){.b{color:red}}@import "https://fonts.example.com/a.css";`;
+      expect(findOffSiteRequests(css, own)).toEqual([
+        "https://fonts.example.com/a.css",
+      ]);
+    });
+
+    it("reports a url() after a container query and a child combinator", () => {
+      const css = `@container (40rem<width<60rem){}.b{background:url(https://x.example.com/b)}.c>.d{}`;
+      expect(findOffSiteRequests(css, own)).toEqual([
+        "https://x.example.com/b",
+      ]);
+    });
+
+    it("reports a url() after a string holding '<b'", () => {
+      const css = `.f:before{content:"<b"}.g{background:url(https://cdn.example.com/g.png)}`;
+      expect(findOffSiteRequests(css, own)).toEqual([
+        "https://cdn.example.com/g.png",
+      ]);
+    });
+
+    it("reads an escaped '(' in an unquoted url()", () => {
+      expect(
+        findOffSiteRequests(
+          ".a{background:url(https://ep.example.com/a\\(b)}",
+          own,
+        ),
+      ).toEqual(["https://ep.example.com/a\\(b"]);
+    });
+  });
+
+  describe("one attribute reader (F5-02, F5-03)", () => {
+    it("reads a <link> and an <image> after a raw '>' in a quoted value", () => {
+      const html = `
+        <link title="Jane > PI" rel="stylesheet" href="https://c.example.com/x.css">
+        <svg><image title="Jane > PI" href="https://d.example.com/x.png"/></svg>`;
+      expect(findOffSiteRequests(html, own).sort()).toEqual([
+        "https://c.example.com/x.css",
+        "https://d.example.com/x.png",
+      ]);
+    });
+
+    it("reads attributes separated by '/'", () => {
+      const html = `
+        <img/src="https://a.example.com/a.png">
+        <link/rel="stylesheet"/href="https://b.example.com/a.css">
+        <svg><image/href="https://c.example.com/a.png"/></svg>`;
+      expect(findOffSiteRequests(html, own).sort()).toEqual([
+        "https://a.example.com/a.png",
+        "https://b.example.com/a.css",
+        "https://c.example.com/a.png",
+      ]);
+    });
+
+    it("reads xlink:href, upper-case names and a long tag name", () => {
+      const html = `
+        <svg><USE XLINK:HREF="https://u.example.com/s.svg#i"/></svg>
+        <${"x".repeat(100)} src="https://l.example.com/a.png">`;
+      expect(findOffSiteRequests(html, own).sort()).toEqual([
+        "https://l.example.com/a.png",
+        "https://u.example.com/s.svg#i",
+      ]);
+    });
+
+    it("reads whitespace around '='", () => {
+      const html = `
+        <div style ="background:url(&quot;https://a.example.com/a&quot;)"></div>
+        <div style= "background:url(&quot;https://b.example.com/a&quot;)"></div>
+        <img src = "https://c.example.com/a.png">`;
+      expect(findOffSiteRequests(html, own).sort()).toEqual([
+        "https://a.example.com/a",
+        "https://b.example.com/a",
+        "https://c.example.com/a.png",
+      ]);
+    });
+
+    it("does not report a non-fetching <link> or a plain <a href>", () => {
+      const html = `<link title="a > b" rel="canonical" href="https://x.example.com/">
+        <a title="a > b" href="https://x.example.com/">x</a>`;
+      expect(findOffSiteRequests(html, own)).toEqual([]);
+    });
+
+    it.each(["<link ", "<use ", "<image "])(
+      "scans %s with no closing '>' in linear time",
+      (open) => {
+        const started = performance.now();
+        expect(findOffSiteRequests(open.repeat(200000), own)).toEqual([]);
+        expect(performance.now() - started).toBeLessThan(1000);
+      },
+    );
+
+    it("scans pathological CSS and markup in linear time", () => {
+      for (const input of [
+        "<a ".repeat(200000),
+        "<!--".repeat(200000),
+        "<![CDATA[".repeat(100000),
+        "<svg><style>".repeat(100000),
+        "<script ".repeat(100000),
+        "&".repeat(500000),
+      ]) {
+        const started = performance.now();
+        findOffSiteRequests(input, own);
+        expect(performance.now() - started).toBeLessThan(1000);
+      }
+    });
+  });
+
+  describe("regions end where the browser ends them (F5-04)", () => {
+    it("reads <noscript> as markup", () => {
+      expect(findOffSiteRequests(`<noscript>${D}</noscript>`, own)).toEqual([
+        X,
+      ]);
+    });
+
+    it.each([
+      ["<!-->", "<!--> D <!-- c -->"],
+      ["<!--->", "<!---> D"],
+      ["--!>", "<!-- a --!> D"],
+    ])("ends a comment at %s", (_name, html) => {
+      expect(findOffSiteRequests(html.replace("D", D), own)).toEqual([X]);
+    });
+
+    it("ends a bogus comment at the next '>'", () => {
+      for (const html of [
+        `<![CDATA[ <a title=" ]]> ${D}`,
+        `</ <a title="> ${D}`,
+        `<? <a title="?> ${D}`,
+      ]) {
+        expect(findOffSiteRequests(html, own)).toEqual([X]);
+      }
+    });
+
+    it("ends CDATA inside SVG at ']]>'", () => {
+      const html = `<svg><![CDATA[ <a title=" ]]></svg>${D}`;
+      expect(findOffSiteRequests(html, own)).toEqual([X]);
+    });
+
+    it("ends a raw-text element only at its own end tag", () => {
+      const html = `<script>a="</scripts>";b='<a title="'</script>${D}`;
+      expect(findOffSiteRequests(html, own)).toEqual([X]);
+    });
+
+    it("ends a raw-text element at an end tag followed by whitespace or '/'", () => {
+      for (const end of ["</script >", "</script/>", "</SCRIPT>"]) {
+        expect(
+          findOffSiteRequests(`<script>'<a title="'${end}${D}`, own),
+        ).toEqual([X]);
+      }
+    });
+
+    it("keeps reading after an SVG <style> with no end tag", () => {
+      const html = `<svg><style>.a{}</svg>${D}`;
+      expect(findOffSiteRequests(html, own)).toEqual([X]);
+    });
+
+    it("still decodes the text of an unterminated SVG <style>", () => {
+      const html = `<svg><style>.a{fill:url(&quot;${X}&quot;)}`;
+      expect(findOffSiteRequests(html, own)).toEqual([X]);
+    });
+
+    it("ends an SVG <style> at '</style' followed by whitespace", () => {
+      const html = `<svg><style>.a{fill:url(&quot;https://s.example.com/a&quot;)}</style ></svg>${D}`;
+      expect(findOffSiteRequests(html, own).sort()).toEqual([
+        "https://s.example.com/a",
+        X,
+      ]);
+    });
+  });
+
+  describe("mutants that hid a request (F5-05)", () => {
+    it("reads an SVG <style> after a stray '</svg>'", () => {
+      const html = `</svg><svg><style>.a{fill:url(&quot;${X}&quot;)}</style></svg>`;
+      expect(findOffSiteRequests(html, own)).toEqual([X]);
+    });
+
+    it("finds the end of <SCRIPT> in upper case", () => {
+      const html = `<SCRIPT>if (a<b) s = 'x</SCRIPT>${D}`;
+      expect(findOffSiteRequests(html, own)).toEqual([X]);
+    });
+
+    it.each([
+      "textarea",
+      "title",
+      "xmp",
+      "iframe",
+      "noembed",
+      "noframes",
+      "style",
+    ])("does not read tags inside <%s>", (name) => {
+      const html = `<${name}><a title="</${name}>${D}`;
+      expect(findOffSiteRequests(html, own)).toEqual([X]);
+    });
+
+    it("leaves '&quot=' and '&quot1' undecoded in an attribute", () => {
+      const html = `
+        <div style="background:url(//w1.example.com/a&quot=x)"></div>
+        <div style="background:url(//w2.example.com/a&quot1)"></div>`;
+      expect(findOffSiteRequests(html, own).sort()).toEqual([
+        "//w1.example.com/a&quot=x",
+        "//w2.example.com/a&quot1",
+      ]);
+    });
+
+    it("reports each URL once", () => {
+      const html = `<div style="background:url('https://x.example.com/a')"></div>`;
+      expect(findOffSiteRequests(html, own)).toEqual([X]);
+    });
+  });
 });

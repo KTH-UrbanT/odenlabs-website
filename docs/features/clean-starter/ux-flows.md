@@ -149,7 +149,9 @@ listing (AC-09).
 ```mermaid
 flowchart TD
     A(["Maintainer removes a page from the repository; the change is accepted"]) --> B(["Publish runs, deletion on"])
-    B --> C{"Build has the front page and logo?"}
+    B --> M{"Every build path well-formed?"}
+    M -->|no| W["Publish stops before changing anything: SCR-04 names malformed-path (AC-12)"]
+    M -->|yes| C{"Build has the front page and logo?"}
     C -->|no| S["Publish stops before deleting: SCR-04 names the failed check (AC-12)"]
     C -->|yes| E{"Build file at a protected file's address?"}
     E -->|yes| T["Publish stops before changing anything: SCR-04 names the clash (AC-11b)"]
@@ -157,7 +159,9 @@ flowchart TD
     P -->|yes| Q["Publish stops before changing anything: SCR-04 names approved-in-build (data-model guard)"]
     P -->|no| X{"A listed file or folder in the way of an address the build needs?"}
     X -->|yes| Y["Publish stops before changing anything: SCR-04 names layout-clash and the path (AC-13b)"]
-    X -->|no| D{"Target folder holds the previous record with its front page and logo?"}
+    X -->|no| Z{"Previous record lists a malformed path?"}
+    Z -->|yes| W
+    Z -->|no| D{"Target folder holds the previous record with its front page and logo?"}
     D -->|no| S
     D -->|yes| F{"More than 20 removals without an exactly matching approved list?"}
     F -->|yes| S
@@ -172,20 +176,23 @@ flowchart TD
 ```
 
 The maintainer removes a page from the repository, the change is accepted, and a publish runs with
-deletion on. Before it changes anything, six checks run in this order, the same order as
-`deploy/plan.ts`. Does the build contain the front page and the logo? Is there a build file at a
+deletion on. Before it changes anything, eight checks run in this order, the same order as
+`deploy/plan.ts`. Is every build path well-formed (`malformed-path`)? Does the build contain the
+front page and the logo? Is there a build file at a
 protected file's address? Is a build file also on the maintainer's approved removal list? Is any
-file or folder already on the server in the way of an address the build needs? Does the target
+file or folder already on the server in the way of an address the build needs? Does the previous
+publish's record list a malformed path (`malformed-path` again, for the record)? Does the target
 folder hold the previous publish's record, with the front page and logo that record lists? Would
 the publish remove more than 20 files without an approved list that matches exactly? The first
-check that fails stops the publish, and the report names it. A missing front page or logo, a wrong
+check that fails stops the publish, and the report names it. A malformed path, a missing front page or logo, a wrong
 folder, or too many removals stops the publish before any deletion (AC-12). A clash with a
 protected address stops the publish before anything on the server changes (AC-11b), and so does a
 build file that is also approved for removal (`approved-in-build`, a data-model guard with no AC of
 its own). So does a listed file or folder in the way of the build, such as a file where the build
 needs a folder: the report names `layout-clash` and the path, and the file is left untouched
-(AC-13b). The first four checks run whatever the deletion setting; the record and removal checks
-run only with deletion on. If every check passes, the build is uploaded, files a previous
+(AC-13b). The first six checks run whatever the deletion setting, a malformed record included, because
+dropping it would also drop the leftovers it carries; the record and removal checks run only with
+deletion on. If every check passes, the build is uploaded, files a previous
 publish recorded or the maintainer approved are removed, and protected files stay untouched
 (AC-11). Files the site never published and nobody reviewed are left in place and reported for a
 keep-or-remove decision (AC-13), unless one is in the way of the build (AC-13b). The publish report lists what was removed (AC-01 for the first
