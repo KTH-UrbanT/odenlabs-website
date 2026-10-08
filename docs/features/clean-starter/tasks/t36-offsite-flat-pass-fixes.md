@@ -44,5 +44,5 @@ Follow-up from the eighth review ([`_review/review-2026-10-08-2.md`](../_review/
 ## Definition of Done
 
 - [x] each repro above reports its URL; own-host and relative URLs, `&Colon;`, escaped page text, a plain `<style>` with `&quot;` and text after a closed SVG still report nothing; the current build reports nothing
-- [x] no mutant in the T36 list survives; the slowest 1 MB input is under 1 s
+- [x] no mutant in the T36 list survives; the slowest 1 MB input is under 4 s (measured 0.1–0.8 s; budget set by T38)
 - [x] `npm run lint && npm test` clean

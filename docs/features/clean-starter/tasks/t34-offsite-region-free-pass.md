@@ -48,5 +48,5 @@ from itself") is then false. Every input below was checked against parse5 (the b
 ## Definition of Done
 
 - [x] each repro above reports its URL; own-host and relative URLs, `&Colon;` and the current build still report nothing
-- [x] no mutant in the T34 list survives; the slowest 1 MB input is under 1 s
+- [x] no mutant in the T34 list survives; the slowest 1 MB input is under 4 s (measured 0.1–0.8 s; budget set by T38)
 - [x] `npm run lint && npm test` clean

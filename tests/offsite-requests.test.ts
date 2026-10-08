@@ -9,6 +9,11 @@ import {
 
 const own = "oden.abe.kth.se";
 
+// Wall-clock budget for the linear-time tests on 1 MB inputs. They take about
+// 0.5 s alone and more beside the build test, and a quadratic scan takes
+// minutes, so the margin is wide on purpose.
+const LINEAR_BUDGET_MS = 4000;
+
 describe("findOffSiteRequests", () => {
   it("reports an off-site stylesheet link", () => {
     const html =
@@ -243,7 +248,7 @@ describe("findOffSiteRequests", () => {
   it("scans malformed url() input in linear time", () => {
     const started = performance.now();
     expect(findOffSiteRequests("url(".repeat(200000), own)).toEqual([]);
-    expect(performance.now() - started).toBeLessThan(1000);
+    expect(performance.now() - started).toBeLessThan(LINEAR_BUDGET_MS);
   });
 
   it("allows own-host, relative and data URLs, plain links and mailto", () => {
@@ -358,7 +363,7 @@ describe("findOffSiteRequests", () => {
       (open) => {
         const started = performance.now();
         expect(findOffSiteRequests(open.repeat(200000), own)).toEqual([]);
-        expect(performance.now() - started).toBeLessThan(1000);
+        expect(performance.now() - started).toBeLessThan(LINEAR_BUDGET_MS);
       },
     );
 
@@ -373,7 +378,7 @@ describe("findOffSiteRequests", () => {
       ]) {
         const started = performance.now();
         findOffSiteRequests(input, own);
-        expect(performance.now() - started).toBeLessThan(1000);
+        expect(performance.now() - started).toBeLessThan(LINEAR_BUDGET_MS);
       }
     });
   });
@@ -546,7 +551,7 @@ describe("findOffSiteRequests", () => {
       ]) {
         const started = performance.now();
         findOffSiteRequests(input, own);
-        expect(performance.now() - started).toBeLessThan(1000);
+        expect(performance.now() - started).toBeLessThan(LINEAR_BUDGET_MS);
       }
     });
   });
@@ -711,7 +716,7 @@ describe("findOffSiteRequests", () => {
       ]) {
         const started = performance.now();
         findOffSiteRequests(input, own);
-        expect(performance.now() - started).toBeLessThan(1000);
+        expect(performance.now() - started).toBeLessThan(LINEAR_BUDGET_MS);
       }
     });
   });
@@ -759,8 +764,8 @@ describe("findOffSiteRequests", () => {
         `<svg><style><!-- </style><a title=" --></style></svg><img alt="a<b>" src="${T}">`,
       ],
       [
-        "a quoted '<' before <link rel>",
-        `<svg><style><link alt="a<b" rel="stylesheet" href="${T}"></style></svg>`,
+        "a quoted '<' before <link rel> after a breakout script",
+        `<svg><title>${ODD}<link alt="a<b" rel="stylesheet" href="${T}"></title></svg>`,
       ],
       [
         "a quoted '<' before <image href>",
@@ -879,7 +884,100 @@ describe("findOffSiteRequests", () => {
       ]) {
         const started = performance.now();
         findOffSiteRequests(input, own);
-        expect(performance.now() - started).toBeLessThan(1000);
+        expect(performance.now() - started).toBeLessThan(LINEAR_BUDGET_MS);
+      }
+    });
+  });
+
+  // T38 (review 2026-10-09, pass 9, H9-01 and H9-02).
+  describe("legacy scan after bare attributes and mutant rows (T38)", () => {
+    const T = "https://t.example.com/p.png";
+    const ODD = `<script>const t = '<span title="';</script>`;
+    const STYLE_URL = `.b{background:url(&quot;${T}&quot;)}`;
+
+    // A bare or unquoted attribute between the quoted '>' and the URL.
+    it.each([
+      [
+        "a bare attribute",
+        `<svg><style><img alt="a > b" hidden src="${T}"></style></svg>`,
+      ],
+      [
+        "an unquoted attribute and a quoted '<'",
+        `<svg><style><img alt="a < b" class=x src="${T}"></style></svg>`,
+      ],
+      [
+        "an unquoted width and srcset",
+        `<svg><style><img alt='a > b' width=10 srcset="${T} 2x"></style></svg>`,
+      ],
+      [
+        "a bare attribute after a breakout script",
+        `<svg><title>${ODD}<img alt="a > b" hidden src="${T}"></title></svg>`,
+      ],
+      [
+        "a data attribute without a value",
+        `<svg><style><img alt="a > b" data-x src="${T}"></style></svg>`,
+      ],
+      [
+        "a bare controls and poster",
+        `<svg><style><video title="a > b" controls poster="${T}"></video></style></svg>`,
+      ],
+    ])("the legacy scan reads a URL after %s", (_label, html) => {
+      expect(legacyUrls(html)).toContain(T);
+      expect(findOffSiteRequests(html, own)).toEqual([T]);
+    });
+
+    it("the legacy scan skips an attribute in escaped page text", () => {
+      for (const html of [
+        `<p>&lt;img src="${T}"&gt;</p>`,
+        `<p>a&amp;b src="${T}"</p>`,
+        `<p>&lt;img \n  src="${T}"&gt;</p>`,
+      ])
+        expect(legacyUrls(html)).toEqual([]);
+    });
+
+    it("the legacy scan reads an attribute at the start of the source", () => {
+      expect(legacyUrls(`src="${T}"`)).toEqual([T]);
+      expect(legacyUrls(`  \n src="${T}"`)).toEqual([T]);
+    });
+
+    // One row per survivor of the ninth pass's mutant run.
+    it("the legacy scan reads a second <link>/<image>/<use> group", () => {
+      const html = `<link rel="icon" href="/favicon.svg"><svg><style><image alt="a<b" href="${T}"/></style></svg>`;
+      expect(legacyUrls(html)).toContain(T);
+    });
+
+    it("the legacy scan reads the first start of a group sharing one '>'", () => {
+      const html = `<svg><style><image alt="a<b" href="${T}" title="<use "/></style></svg>`;
+      expect(legacyUrls(html)).toContain(T);
+    });
+
+    it("the legacy scan reads attributes past 64 characters", () => {
+      const html = `<svg><style><image alt="a<b" class="icon icon-large decorative" width="24" height="24" href="${T}"/></style></svg>`;
+      expect(legacyUrls(html)).toContain(T);
+    });
+
+    it("the legacy scan reads a URL after a newline and indentation", () => {
+      const html = `<svg><style><img alt="a > b"\n     src="${T}"></style></svg>`;
+      expect(legacyUrls(html)).toContain(T);
+    });
+
+    it("the region-free pass ends an SVG <style> at </svg>, not </svgx>", () => {
+      const html = `<svg><title>${ODD}</title><style>.a{} </svgx> ${STYLE_URL}</svg>`;
+      expect(readFlat(html).decoded.some((v) => v.includes(T))).toBe(true);
+    });
+
+    it("stays linear on tokens before src and on runs of attribute-like text", () => {
+      for (const input of [
+        " x".repeat(500000) + ' src="a"',
+        ' src="a" x'.repeat(100000),
+        " hidden src=".repeat(90000),
+        "&lt;img src=".repeat(90000),
+        "a".repeat(1_000_000) + " src=x",
+        `${" ".repeat(500000)}src=x${" ".repeat(500000)}`,
+      ]) {
+        const started = performance.now();
+        findOffSiteRequests(input, own);
+        expect(performance.now() - started).toBeLessThan(LINEAR_BUDGET_MS);
       }
     });
   });

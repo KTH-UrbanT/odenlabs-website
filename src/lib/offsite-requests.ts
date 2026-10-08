@@ -1,8 +1,16 @@
 // Finds requests a built page or stylesheet would make to another host
 // (spec §6 NFR: third-party requests 0). Plain `<a href>` links and `mailto:`
-// are navigation, not requests, and are not reported. Some inputs the browser
-// doesn't parse as tags are reported too (a commented-out `<img>`, a string in
-// a script, text in a `<textarea>`): that fails the build, never the visitor.
+// are navigation, not requests, and are not reported.
+//
+// The scan is deliberately over-eager: it also reports text the browser doesn't
+// parse as tags, so that no misreading of the page can hide a request. That
+// means a commented-out `<img>`, a string in a script, the text of a `<textarea>`
+// or `<title>`, an attribute value holding markup, and a quoted `"x" src="…"` in
+// page text. The likeliest case is Markdown inline code such as
+// `<img alt="x" src="https://…">`, which renders with raw quotes. It fails the
+// build, never the visitor: the build test names the offending file, and the
+// example is then wrapped, moved off the page or made to use the group's own
+// host. Spec §8 R6-02 lists the trade-offs and what stays uncovered.
 
 // `<link>` relations that make the browser fetch the target.
 const FETCHING_REL =
@@ -394,30 +402,41 @@ export function readFlat(html: string): { tags: Tag[]; decoded: string[] } {
 }
 
 // The scans the guard used before it read tags (commit 330d079), kept as a
-// member of the union: they find an attribute anywhere in the source, not inside
-// a tag, so no region, quote or `>` before it can hide it. `src`, `poster` and
-// `srcset` count only right after a closing quote (`alt="a > b" src=…`, as Astro
-// writes every attribute), so escaped page text such as `&lt;img src="…"&gt;`
-// is not reported. They over-report otherwise (`"x" src="y"` in page text) and
-// that fails the build, never the visitor. `<link>`, `<image>` and `<use>` need
-// their tag: the attributes run to the first `>`, read for the first and the
-// last start before that `>`, so a run of starts is not rescanned from each one.
-// A quoted `>` before their `rel`/`href` is not covered (the old scan missed it too).
+// member of the union: `src`, `poster` and `srcset` are found anywhere in the
+// source, not inside a tag, so a quoted `>` or `<`, a comment or a raw-text
+// element before them can't hide them. A match counts when it follows a closing
+// quote (`alt="a > b" src=…`) or a bare or `name=value` token that itself starts
+// after whitespace (`hidden src=…`, `class=x src=…`); escaped page text such as
+// `&lt;img src="…"&gt;` (the token holds `&` and `;`) is not reported. They
+// over-report otherwise (`hidden src="y"` in page text). `<link>`, `<image>` and
+// `<use>` need their tag: the attributes run to the first `>`, read for the
+// first and the last start before that `>`, so a run of starts is not rescanned
+// from each one. Not covered, as before: a quoted `>` before the `rel`/`href` of
+// those three, and a `style` attribute after a quoted `>` in a misread page.
 const VALUE = String.raw`\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))`;
-const attrPattern = (name: string, afterQuote = false) =>
-  new RegExp(
-    (afterQuote ? String.raw`(?<=["'])\s+` : String.raw`(?:^|\s)`) +
-      name +
-      VALUE,
-    afterQuote ? "gi" : "i",
-  );
+const attrPattern = (name: string, flags = "i") =>
+  new RegExp(String.raw`(?:^|\s)${name}` + VALUE, flags);
 const legacyValue = (m: RegExpMatchArray) =>
   decodeEntities(m[1] ?? m[2] ?? m[3], true);
+
+// Whether the attribute matched at `at` (the whitespace before its name, or 0)
+// follows a closing quote or an attribute-like token. Looks back over the
+// whitespace and at most one token, so the matches don't rescan each other.
+function followsAttribute(source: string, at: number): boolean {
+  let i = at;
+  while (i > 0 && WS.test(source[i - 1])) i--;
+  if (i === 0) return true;
+  if (source[i - 1] === '"' || source[i - 1] === "'") return true;
+  let start = i;
+  while (start > 0 && !WS.test(source[start - 1])) start--;
+  return !/[&;<>"']/.test(source.slice(start, i));
+}
 
 export function legacyUrls(source: string): string[] {
   const urls: string[] = [];
   for (const name of ["src", "poster", "srcset"]) {
-    for (const m of source.matchAll(attrPattern(name, true))) {
+    for (const m of source.matchAll(attrPattern(name, "gi"))) {
+      if (!followsAttribute(source, m.index)) continue;
       const value = legacyValue(m);
       if (name === "srcset") {
         for (const candidate of value.split(","))
