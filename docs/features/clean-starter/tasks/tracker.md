@@ -40,6 +40,8 @@
 | T33 | Off-site guard: reader desync (review R6-02)                                                  | tests  | pasichnyi | M        | T31                 | done    |
 | T34 | Off-site guard: region-free pass, svg/math depth, pin T33 fixes (review F7-01–F7-03)           | tests  | pasichnyi | M        | T33                 | done    |
 | T35 | T33 bookkeeping and ship drafts (review F7-04)                                                | docs   | pasichnyi | S        | T34                 | done    |
+| T36 | Off-site guard: flat-pass fixes, pre-T31 sixth member, mutant rows (review G8-01–G8-04)       | tests  | pasichnyi | M        | T34                 | todo    |
+| T37 | T35 status, tracker total, R6-02 wording (review G8-04)                                       | docs   | pasichnyi | S        | T36                 | todo    |
 
 **Total:** 35 tasks, ~16.3 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 
@@ -60,3 +62,5 @@ before/after sign-off. T7 waits for T6.
 **Review follow-ups, 6th pass (2026-10-07):** T33 done; R6-01, R6-03, R6-04 deferred.
 
 **Review follow-ups, 7th pass (2026-10-08):** T34–T35 done (F7-01 to F7-04 fixed); F7-01 reopened R6-02 and T34 closes it. Re-review pending.
+
+**Review follow-ups, 8th pass (2026-10-08):** T36–T37 added (G8-01 to G8-04, all fix-now); R6-02 reopened until T36 is done.

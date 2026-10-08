@@ -665,6 +665,39 @@
       ],
       "file": "docs/features/clean-starter/tasks/t35-docs-sync-6.md",
       "source": "review-2026-10-08 F7-04"
+    },
+    {
+      "id": "T36",
+      "title": "Off-site guard: linear flat pass, pre-T31 sixth member, flat-pass accuracy, mutant rows",
+      "layer": "tests",
+      "deps": [
+        "T34"
+      ],
+      "acs": [],
+      "dod": "the flat tag name stops at '<' and 1 MB '<a' inputs stay under 1 s; the pre-T31 global attribute scans are unioned as a sixth member and every repro reports its URL; the flat pass counts svg and math apart, takes self-closing from readAttributes and ends its style run at </style or </svg; the trade-off wording is widened; one test row per surviving mutant and none survives; the current build passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t36-offsite-flat-pass-fixes.md",
+      "source": "review-2026-10-08-2 G8-01, G8-02, G8-03, G8-04"
+    },
+    {
+      "id": "T37",
+      "title": "T35 status, tracker total, R6-02 wording after T36",
+      "layer": "docs",
+      "deps": [
+        "T36"
+      ],
+      "acs": [],
+      "dod": "T35 done and ticked, tracker total and rows, spec updated_at and R6-02, pr-body and changelog agree with spec 8 and the code at HEAD",
+      "files_hint": [
+        "docs/features/clean-starter/tasks/tracker.md",
+        "docs/features/clean-starter/spec.md",
+        "docs/features/clean-starter/pr-body.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t37-docs-sync-7.md",
+      "source": "review-2026-10-08-2 G8-04"
     }
   ]
 }
