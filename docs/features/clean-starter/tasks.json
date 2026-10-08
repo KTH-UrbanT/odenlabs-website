@@ -698,6 +698,39 @@
       ],
       "file": "docs/features/clean-starter/tasks/t37-docs-sync-7.md",
       "source": "review-2026-10-08-2 G8-04"
+    },
+    {
+      "id": "T38",
+      "title": "Off-site guard: legacy scan after bare attributes, mutant rows, module header, stable time budget",
+      "layer": "tests",
+      "deps": [
+        "T36"
+      ],
+      "acs": [],
+      "dod": "legacyUrls also reads src/poster/srcset after a bare or unquoted attribute and every repro reports its URL; its comment states what stays uncovered; one test row per surviving mutant and none survives; the module header lists the trade-offs; every linear-time test uses a 4 s budget and npm test passes five times in a row; the current build passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t38-offsite-legacy-scan-fixes.md",
+      "source": "review-2026-10-09 H9-01, H9-02, H9-03, H9-04"
+    },
+    {
+      "id": "T39",
+      "title": "Bookkeeping after T38",
+      "layer": "docs",
+      "deps": [
+        "T38"
+      ],
+      "acs": [],
+      "dod": "tracker, spec 8 R6-02, pr-body and changelog agree with the code at HEAD",
+      "files_hint": [
+        "docs/features/clean-starter/tasks/tracker.md",
+        "docs/features/clean-starter/spec.md",
+        "docs/features/clean-starter/pr-body.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t39-docs-sync-8.md",
+      "source": "review-2026-10-09 H9-01, H9-04"
     }
   ]
 }
