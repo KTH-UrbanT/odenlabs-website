@@ -473,4 +473,75 @@ describe("findOffSiteRequests", () => {
       expect(findOffSiteRequests(html, own)).toEqual([X]);
     });
   });
+
+  // T33 (review 2026-10-07 pass 6, R6-02): the reader must not lose sync.
+  describe("reader desync (R6-02)", () => {
+    const IMG = '<img src="https://t.example.com/p.png">';
+    const T = "https://t.example.com/p.png";
+    const ODD = `<script>const t = '<span title="';</script>`;
+
+    it.each([
+      ["a self-closing <svg/>", `<svg/>${ODD}${IMG}`],
+      ["a self-closing <svg />", `<svg />${ODD}${IMG}`],
+      ["a self-closing <svg class=a/ >", `<svg class="a"/>${ODD}${IMG}`],
+      [
+        "<foreignObject>",
+        `<svg><foreignObject>${ODD}${IMG}</foreignObject></svg>`,
+      ],
+      ["<desc>", `<svg><desc>${ODD}${IMG}</desc></svg>`],
+      ["an HTML tag ending the SVG", `<svg><p>${ODD}${IMG}`],
+      ["<math>", `<math><mi>x</mi></math>${ODD}${IMG}`],
+      ["an unclosed <svg>", `<svg>${ODD}${IMG}`],
+      [
+        "<noscript> with scripting on",
+        `<noscript><script>x='<a title="'</script></noscript>${IMG}`,
+      ],
+      [
+        "<noscript> text with an odd quote",
+        `<noscript><p title="</noscript>${IMG}`,
+      ],
+    ])("reports an image after %s", (_label, html) => {
+      expect(findOffSiteRequests(html, own)).toEqual([T]);
+    });
+
+    it("does not treat '/' in an unquoted value as a self-closing tag", () => {
+      const html = `<svg data-x=a/>${IMG}</svg>`;
+      expect(findOffSiteRequests(html, own)).toEqual([T]);
+    });
+
+    it("ends an unterminated SVG <style> at an upper-case </SVG>", () => {
+      expect(findOffSiteRequests(`<svg><style>.a{}</SVG>${D}`, own)).toEqual([
+        X,
+      ]);
+    });
+
+    it("keeps NBSP out of the attribute separators", () => {
+      const html = `<a title=\u00A0">${IMG}`;
+      expect(findOffSiteRequests(html, own)).toEqual([T]);
+    });
+
+    it("keeps NBSP out of raw-text end tags", () => {
+      const html = `<script>a="</script\u00A0>";b='<a title="'</script>${IMG}`;
+      expect(findOffSiteRequests(html, own)).toEqual([T]);
+    });
+
+    it("still ignores page text and own-host images after the extra readings", () => {
+      const html = `<svg/><p>&lt;img src="https://t.example.com/p.png"&gt;</p>
+        <img src="/p.png"><img src="https://oden.abe.kth.se/p.png">`;
+      expect(findOffSiteRequests(html, own)).toEqual([]);
+    });
+
+    it("stays linear with the extra readings", () => {
+      for (const input of [
+        "<svg/>".repeat(200000),
+        "<math><svg>".repeat(100000),
+        "<noscript><script ".repeat(100000),
+        "<a title=\u00A0".repeat(100000),
+      ]) {
+        const started = performance.now();
+        findOffSiteRequests(input, own);
+        expect(performance.now() - started).toBeLessThan(1000);
+      }
+    });
+  });
 });

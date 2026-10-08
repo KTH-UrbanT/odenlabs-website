@@ -37,6 +37,7 @@
 | T30 | US-06 check order in ux-flows, AC-13b approved case (review R4-05, R4-06)                    | docs   | pasichnyi | S        | —                   | done    |
 | T31 | Off-site guard: additive decoding, one attribute reader, regions (review F5-01–F5-05)         | tests  | pasichnyi | M        | T29                 | done    |
 | T32 | US-06 malformed-path, sad Flow 5 deletion-off stops (review F5-06)                            | docs   | pasichnyi | S        | —                   | done    |
+| T33 | Off-site guard: reader desync (review R6-02)                                                  | tests  | pasichnyi | M        | T31                 | done    |
 
 **Total:** 32 tasks, ~14.6 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 

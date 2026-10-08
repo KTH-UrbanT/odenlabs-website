@@ -66,8 +66,7 @@ function decodeEntities(text: string, inAttribute: boolean): string {
 
 // Elements whose text the browser does not parse as tags: raw text (`script`,
 // `style`, `xmp`, `iframe`, `noembed`, `noframes`) and RCDATA (`textarea`,
-// `title`). `noscript` is not here: with scripting off, which is how a visitor
-// may see the page, its content is markup.
+// `title`). `noscript` is raw text only with scripting on (see `Reading`).
 const RAW_TEXT = new Set([
   "script",
   "style",
@@ -78,6 +77,21 @@ const RAW_TEXT = new Set([
   "noembed",
   "noframes",
 ]);
+
+// HTML whitespace. Not `\s`: NBSP and the other Unicode spaces are ordinary
+// characters in a tag, so reading them as separators would lose sync.
+const WS = /[ \t\n\f\r]/;
+
+// One way of reading a page. The browser's reading depends on things the text
+// alone doesn't settle (is scripting on, which tags end foreign content), so
+// `findOffSiteRequests` reads the page under each combination and unions them.
+interface Reading {
+  // `<svg>` and `<math>` start foreign content: `<script>`, `<title>`… are then
+  // ordinary elements, and an SVG `<style>` is parsed as markup.
+  foreign: boolean;
+  // `<noscript>` is raw text (scripting on) rather than markup (scripting off).
+  noscriptRaw: boolean;
+}
 
 interface Tag {
   name: string;
@@ -96,12 +110,15 @@ interface Tag {
 // Page text, comments and raw-text elements are not decoded: the browser doesn't
 // decode them, and decoding prose would report it as requests.
 //
-// One forward pass. A tag runs to the first `>` outside quotes, so a raw `<`,
+// One forward pass per reading. A tag runs to the first `>` outside quotes, so a raw `<`,
 // `>` or `</svg>` inside a value (Astro keeps all three raw in expression
 // attributes) does not end it. A quote still open at the end of the input stops
 // the scan, and every search moves forward, so a malformed page can't make it
 // quadratic.
-function readMarkup(html: string): { tags: Tag[]; decoded: string[] } {
+function readMarkup(
+  html: string,
+  { foreign, noscriptRaw }: Reading,
+): { tags: Tag[]; decoded: string[] } {
   const tags: Tag[] = [];
   const decoded: string[] = [];
   let i = 0;
@@ -140,7 +157,7 @@ function readMarkup(html: string): { tags: Tag[]; decoded: string[] } {
       i = afterNext(">", i + 2);
       continue;
     }
-    const head = /^<(\/?)([a-z][^\s/>]*)/i.exec(html.slice(i, i + 64));
+    const head = /^<(\/?)([a-z][^ \t\n\f\r/>]*)/i.exec(html.slice(i, i + 64));
     if (!head) {
       i += 1;
       continue;
@@ -149,22 +166,29 @@ function readMarkup(html: string): { tags: Tag[]; decoded: string[] } {
     const name = rawName.toLowerCase();
     const attrs: [string, string][] = [];
     let j = i + head[0].length;
+    let selfClosing = false;
     // Attributes, separated by whitespace or `/`, up to `>`.
     for (;;) {
-      while (j < html.length && /[\s/]/.test(html[j])) j++;
-      if (j >= html.length || html[j] === ">") break;
+      const separators = j;
+      while (j < html.length && (WS.test(html[j]) || html[j] === "/")) j++;
+      if (j >= html.length) break;
+      if (html[j] === ">") {
+        selfClosing = j > separators && html[j - 1] === "/";
+        break;
+      }
       const nameStart = j;
-      while (j < html.length && !/[\s/>=]/.test(html[j])) j++;
+      while (j < html.length && !WS.test(html[j]) && !/[/>=]/.test(html[j]))
+        j++;
       if (j === nameStart) j++; // a stray `=` where a name starts
       const attrName = html.slice(nameStart, j).toLowerCase();
       let k = j;
-      while (k < html.length && /\s/.test(html[k])) k++;
+      while (k < html.length && WS.test(html[k])) k++;
       if (html[k] !== "=") {
         attrs.push([attrName, ""]);
         continue;
       }
       k++;
-      while (k < html.length && /\s/.test(html[k])) k++;
+      while (k < html.length && WS.test(html[k])) k++;
       let valueEnd: number;
       let raw: string;
       if (html[k] === '"' || html[k] === "'") {
@@ -174,7 +198,11 @@ function readMarkup(html: string): { tags: Tag[]; decoded: string[] } {
         valueEnd = close + 1;
       } else {
         valueEnd = k;
-        while (valueEnd < html.length && !/[\s>]/.test(html[valueEnd]))
+        while (
+          valueEnd < html.length &&
+          !WS.test(html[valueEnd]) &&
+          html[valueEnd] !== ">"
+        )
           valueEnd++;
         raw = html.slice(k, valueEnd);
       }
@@ -185,21 +213,27 @@ function readMarkup(html: string): { tags: Tag[]; decoded: string[] } {
     }
     i = Math.min(j + 1, html.length);
     if (!closing) tags.push({ name, attrs });
-    if (name === "svg") {
-      svgDepth = Math.max(0, svgDepth + (closing ? -1 : 1));
+    if (foreign && (name === "svg" || name === "math")) {
+      // A self-closing `<svg/>` opens nothing.
+      if (closing || !selfClosing)
+        svgDepth = Math.max(0, svgDepth + (closing ? -1 : 1));
       continue;
     }
     if (closing) continue;
     if (svgDepth > 0 && name === "style") {
+      if (selfClosing) continue;
       // The text runs to `</style`, or, with none, to the end of the SVG.
-      let end = find(/<\/style(?=[\s/>])/gi, i);
+      let end = find(/<\/style(?=[ \t\n\f\r/>])/gi, i);
       if (end !== -1) end -= "</style".length;
-      else end = html.indexOf("</svg", i);
-      if (end === -1) end = html.length;
+      else end = find(/<\/svg/gi, i) - "</svg".length;
+      if (end < 0) end = html.length;
       decoded.push(decodeEntities(html.slice(i, end), false));
       i = end;
-    } else if (svgDepth === 0 && RAW_TEXT.has(name)) {
-      const end = find(new RegExp(`</${name}(?=[\\s/>])`, "gi"), i);
+    } else if (
+      svgDepth === 0 &&
+      (RAW_TEXT.has(name) || (noscriptRaw && name === "noscript"))
+    ) {
+      const end = find(new RegExp(`</${name}(?=[ \\t\\n\\f\\r/>])`, "gi"), i);
       i = end === -1 ? html.length : end - `</${name}`.length;
     }
   }
@@ -213,7 +247,18 @@ export function findOffSiteRequests(source: string, ownHost: string): string[] {
     if (isOffSite(url, ownHost)) found.add(url.trim());
   };
 
-  const { tags, decoded } = readMarkup(source);
+  // The union of every reading: a reading that loses sync with the browser can
+  // only hide a request from itself, not from the others.
+  const tags: Tag[] = [];
+  const decoded: string[] = [];
+  for (const foreign of [true, false]) {
+    for (const noscriptRaw of [false, true]) {
+      const read = readMarkup(source, { foreign, noscriptRaw });
+      // Not `push(...)`: a page with 100k tags would overflow the call stack.
+      for (const tag of read.tags) tags.push(tag);
+      for (const text of read.decoded) decoded.push(text);
+    }
+  }
   for (const { name, attrs } of tags) {
     const get = (...names: string[]) =>
       attrs.filter(([n]) => names.includes(n)).map(([, v]) => v);

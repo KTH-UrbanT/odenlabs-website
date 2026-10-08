@@ -616,6 +616,22 @@
       ],
       "file": "docs/features/clean-starter/tasks/t32-docs-sync-5.md",
       "source": "review-2026-10-05-5 F5-06"
+    },
+    {
+      "id": "T33",
+      "title": "Off-site guard: reader desync (self-closing svg, foreign content, HTML whitespace)",
+      "layer": "tests",
+      "deps": [
+        "T31"
+      ],
+      "acs": [],
+      "dod": "a self-closing svg no longer hides later markup; the reader runs under foreign-content and HTML-only readings and noscript as markup and as raw text, and the results are unioned; upper-case </SVG> ends the fallback; only HTML whitespace separates attributes; every repro reports its URL; the current build passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t33-offsite-reader-desync.md",
+      "source": "review-2026-10-07 R6-02"
     }
   ]
 }
