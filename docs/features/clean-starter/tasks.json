@@ -632,6 +632,39 @@
       ],
       "file": "docs/features/clean-starter/tasks/t33-offsite-reader-desync.md",
       "source": "review-2026-10-07 R6-02"
+    },
+    {
+      "id": "T34",
+      "title": "Off-site guard: region-free tag pass, split svg/math depth, pin T33 fixes with tests, linear SVG style run",
+      "layer": "tests",
+      "deps": [
+        "T33"
+      ],
+      "acs": [],
+      "dod": "a region-free tag pass is unioned with the four readings; svg and math depth are counted separately; the tag head has no length limit; every repro in the task reports its URL; one test row per surviving T33 mutant and none survives; SVG style end search is linear (1 MB adversarial inputs under 1 s); the current build passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t34-offsite-region-free-pass.md",
+      "source": "review-2026-10-08 F7-01, F7-02, F7-03"
+    },
+    {
+      "id": "T35",
+      "title": "T33 bookkeeping and ship drafts",
+      "layer": "docs",
+      "deps": [
+        "T34"
+      ],
+      "acs": [],
+      "dod": "tracker total, T33 checkboxes, spec updated_at, changelog and pr-body agree with spec 8, ADR-0003 and the code at HEAD",
+      "files_hint": [
+        "docs/features/clean-starter/tasks/tracker.md",
+        "docs/features/clean-starter/changelog.md",
+        "docs/features/clean-starter/pr-body.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t35-docs-sync-6.md",
+      "source": "review-2026-10-08 F7-04"
     }
   ]
 }

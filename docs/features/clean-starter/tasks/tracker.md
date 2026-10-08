@@ -38,6 +38,8 @@
 | T31 | Off-site guard: additive decoding, one attribute reader, regions (review F5-01–F5-05)         | tests  | pasichnyi | M        | T29                 | done    |
 | T32 | US-06 malformed-path, sad Flow 5 deletion-off stops (review F5-06)                            | docs   | pasichnyi | S        | —                   | done    |
 | T33 | Off-site guard: reader desync (review R6-02)                                                  | tests  | pasichnyi | M        | T31                 | done    |
+| T34 | Off-site guard: region-free pass, svg/math depth, pin T33 fixes (review F7-01–F7-03)           | tests  | pasichnyi | M        | T33                 | todo    |
+| T35 | T33 bookkeeping and ship drafts (review F7-04)                                                | docs   | pasichnyi | S        | T34                 | todo    |
 
 **Total:** 32 tasks, ~14.6 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 
@@ -54,3 +56,7 @@ before/after sign-off. T7 waits for T6.
 **Review follow-ups, 4th pass (2026-10-04):** T29–T30 done; the embedded tab/newline case joins R-09 in spec §8.
 
 **Review follow-ups, 5th pass (2026-10-05):** T31–T32 done; F5-01 to F5-06 closed pending the sixth pass.
+
+**Review follow-ups, 6th pass (2026-10-07):** T33 done; R6-01, R6-03, R6-04 deferred.
+
+**Review follow-ups, 7th pass (2026-10-08):** T34–T35 added (F7-01 to F7-04, all fix-now); not yet done.
