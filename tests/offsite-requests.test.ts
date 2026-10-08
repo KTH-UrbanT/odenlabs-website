@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { findOffSiteRequests } from "../src/lib/offsite-requests";
+import {
+  findOffSiteRequests,
+  readFlat,
+  readMarkup,
+  type Reading,
+} from "../src/lib/offsite-requests";
 
 const own = "oden.abe.kth.se";
 
@@ -537,6 +542,171 @@ describe("findOffSiteRequests", () => {
         "<math><svg>".repeat(100000),
         "<noscript><script ".repeat(100000),
         "<a title=\u00A0".repeat(100000),
+      ]) {
+        const started = performance.now();
+        findOffSiteRequests(input, own);
+        expect(performance.now() - started).toBeLessThan(1000);
+      }
+    });
+  });
+
+  // T34 (review 2026-10-08, pass 7, F7-01 to F7-03): a page that needs different
+  // readings in different places, and one test per mutant of the T33 fixes.
+  describe("region-free pass and per-reading guarantees (T34)", () => {
+    const T = "https://t.example.com/p.png";
+    const IMG = `<img src="${T}">`;
+    const ODD = `<script>const t = '<span title="';</script>`;
+    const STYLE_URL = `.a{background:url(&quot;${T}&quot;)}`;
+    // An attribute that makes the browser fetch `value` (named `src` or `href`,
+    // so a name that swallowed a separator, such as `\tsrc`, doesn't count).
+    const hasValue = (tags: { attrs: [string, string][] }[], value: string) =>
+      tags.some((tag) =>
+        tag.attrs.some(
+          ([n, v]) => (n === "src" || n === "href") && v === value,
+        ),
+      );
+    const foreignOn: Reading = { foreign: true, noscriptRaw: false };
+    const foreignOff: Reading = { foreign: false, noscriptRaw: false };
+
+    // Inputs the browser fetches that every whole-page reading can miss.
+    const desync: [string, string][] = [
+      ["a script in an SVG <title>", `<svg><title>${ODD}${IMG}</title></svg>`],
+      ["an <img> in an SVG <style>", `<svg><style>${IMG}</style></svg>`],
+      [
+        "a </div> ending the SVG before <style/>",
+        `<div><svg><path d="M0"></div>${ODD}<svg><style/></svg>${IMG}`,
+      ],
+      [
+        "a decoded url() in an SVG <style> after a breakout",
+        `<svg><p>${ODD}<svg><style>${STYLE_URL}</style></svg>`,
+      ],
+      [
+        "a comment in an SVG <style>",
+        `<svg><style><!-- </style><a title=" --></style></svg>${IMG}`,
+      ],
+      [
+        "CDATA in an SVG <style>",
+        `<svg><style><![CDATA[ a{} /* </style><a title=" */ ]]></style></svg>${IMG}`,
+      ],
+      [
+        "a stray </math> inside an SVG",
+        `<svg></math><script>${IMG}</script></svg>`,
+      ],
+      ["a tag name of 70 characters", `<${"a".repeat(70)}='>${IMG}`],
+    ];
+
+    it.each(desync)("the union reports an image after %s", (_label, html) => {
+      expect(findOffSiteRequests(html, own)).toEqual([T]);
+    });
+
+    it.each(desync)("the region-free pass alone reports %s", (_label, html) => {
+      const read = readFlat(html);
+      const found =
+        hasValue(read.tags, T) || read.decoded.some((v) => v.includes(T));
+      expect(found).toBe(true);
+    });
+
+    it("the region-free pass keeps a tag to its own '>' and '<'", () => {
+      const read = readFlat(`<a title="x<y" src="${T}">`);
+      expect(hasValue(read.tags, T)).toBe(true);
+      expect(
+        findOffSiteRequests(`<a href="/x">${IMG.slice(0, 4)}`, own),
+      ).toEqual([]);
+    });
+
+    // Each row isolates one fix: the single reading named must report the URL,
+    // so another reading (or the region-free pass) can't hide a regression.
+    it.each<[string, string, Reading]>([
+      [
+        "<svg/> opens nothing",
+        `<svg/>${ODD}<svg><title>${IMG}</title></svg>`,
+        foreignOn,
+      ],
+      [
+        "'/' in an unquoted value is not self-closing",
+        `<svg data-x=a/><title>${IMG}</title></svg>`,
+        foreignOn,
+      ],
+      [
+        "</SVG> in upper case ends an SVG <style>",
+        `<svg><style>.a{}</SVG>${IMG}`,
+        foreignOn,
+      ],
+      [
+        "<math> starts foreign content",
+        `<math><title>${IMG}</title></math>`,
+        foreignOn,
+      ],
+      [
+        "a self-closing <style/> opens no text run",
+        `<svg><style/><image href="${T}"/></svg>`,
+        foreignOn,
+      ],
+      [
+        "a stray </math> does not close an SVG",
+        `<svg></math><script>${IMG}</script></svg>`,
+        foreignOn,
+      ],
+      ["a tab between attributes", `<img\tsrc="${T}">`, foreignOff],
+      ["a form feed between attributes", `<img\fsrc="${T}">`, foreignOff],
+      [
+        "a tab after the tag name",
+        `<script\t>x</script><img\tsrc="${T}">`,
+        foreignOff,
+      ],
+      [
+        "NBSP is not an attribute separator",
+        `<a title=\u00A0">${IMG}`,
+        foreignOff,
+      ],
+      [
+        "NBSP does not end an unquoted value",
+        `<a title=x\u00A0b=">${IMG}`,
+        foreignOff,
+      ],
+      ["NBSP is part of a tag name", `<a\u00A0title=">${IMG}`, foreignOff],
+      [
+        "an unquoted value ends at HTML whitespace",
+        `<a title=x =">${IMG}`,
+        foreignOff,
+      ],
+    ])("reading alone: %s", (_label, html, reading) => {
+      expect(hasValue(readMarkup(html, reading).tags, T)).toBe(true);
+    });
+
+    it("reading alone: decoded values come from the reading that stays in sync", () => {
+      const html = `<noscript><p title="</noscript><div style="background:url(&quot;${T}&quot;)"></div>`;
+      const read = readMarkup(html, { foreign: false, noscriptRaw: true });
+      expect(read.decoded.some((v) => v.includes(T))).toBe(true);
+      expect(findOffSiteRequests(html, own)).toEqual([T]);
+    });
+
+    it("the region-free pass decodes attribute values", () => {
+      const html = `<div style="background:url(&quot;${T}&quot;)"></div>`;
+      expect(readFlat(html).decoded.some((v) => v.includes(T))).toBe(true);
+    });
+
+    it("the region-free pass reads a quote that never closes to the tag's end", () => {
+      const html = `<div style="background:url(&quot;${T}&quot;)>`;
+      expect(readFlat(html).decoded.some((v) => v.includes(T))).toBe(true);
+    });
+
+    it("keeps a quoted '>' inside the readings and still unions the flat pass", () => {
+      const html = `<a title="a>b" src="${T}">`;
+      expect(findOffSiteRequests(html, own)).toEqual([T]);
+    });
+
+    it("stays linear on SVG <style> runs without an end and on unclosed tags", () => {
+      const n = 60000;
+      for (const input of [
+        "<svg><style></SVG".repeat(n),
+        "<svg><style></svg>".repeat(n),
+        "<svg><style>".repeat(n),
+        "<style>".repeat(n * 2),
+        "<a x=1 ".repeat(n * 2),
+        "<a ".repeat(n * 2),
+        `<${"a".repeat(1_000_000)}`,
+        "<svg><p><style/>".repeat(n),
       ]) {
         const started = performance.now();
         findOffSiteRequests(input, own);

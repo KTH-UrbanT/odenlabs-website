@@ -85,7 +85,7 @@ const WS = /[ \t\n\f\r]/;
 // One way of reading a page. The browser's reading depends on things the text
 // alone doesn't settle (is scripting on, which tags end foreign content), so
 // `findOffSiteRequests` reads the page under each combination and unions them.
-interface Reading {
+export interface Reading {
   // `<svg>` and `<math>` start foreign content: `<script>`, `<title>`… are then
   // ordinary elements, and an SVG `<style>` is parsed as markup.
   foreign: boolean;
@@ -93,9 +93,89 @@ interface Reading {
   noscriptRaw: boolean;
 }
 
-interface Tag {
+export interface Tag {
   name: string;
   attrs: [name: string, value: string][];
+}
+
+// The start of a tag name after `<` or `</`: no length limit, and it stops at
+// whitespace, `/` or `>` like the browser's tag-name state.
+const TAG_NAME = /[a-z][^ \t\n\f\r/>]*/iy;
+
+function tagNameAt(html: string, from: number): string | undefined {
+  TAG_NAME.lastIndex = from;
+  return TAG_NAME.exec(html)?.[0];
+}
+
+interface Attributes {
+  attrs: [name: string, value: string][];
+  // Index of the `>` that ends the tag, or `limit` when there is none.
+  end: number;
+  // `/` right before the `>`, as a separator and not part of an unquoted value.
+  selfClosing: boolean;
+  // A quote was still open at the end of the input.
+  unterminated: boolean;
+}
+
+// Reads the attributes of a tag from `start` (just after its name), separated by
+// whitespace or `/`, up to `>`. Nothing is read at or after `limit`; with
+// `bounded` set, a quote that doesn't close before `limit` runs to `limit`.
+function readAttributes(
+  html: string,
+  start: number,
+  limit: number,
+  bounded: boolean,
+): Attributes {
+  const attrs: [string, string][] = [];
+  let j = start;
+  let selfClosing = false;
+  for (;;) {
+    const separators = j;
+    while (j < limit && (WS.test(html[j]) || html[j] === "/")) j++;
+    if (j >= limit) break;
+    if (html[j] === ">") {
+      selfClosing = j > separators && html[j - 1] === "/";
+      break;
+    }
+    const nameStart = j;
+    while (j < limit && !WS.test(html[j]) && !/[/>=]/.test(html[j])) j++;
+    if (j === nameStart) j++; // a stray `=` where a name starts
+    const attrName = html.slice(nameStart, j).toLowerCase();
+    let k = j;
+    while (k < limit && WS.test(html[k])) k++;
+    if (html[k] !== "=" || k >= limit) {
+      attrs.push([attrName, ""]);
+      continue;
+    }
+    k++;
+    while (k < limit && WS.test(html[k])) k++;
+    let valueEnd: number;
+    let raw: string;
+    if (k < limit && (html[k] === '"' || html[k] === "'")) {
+      const close = html.indexOf(html[k], k + 1);
+      if (close === -1 || close >= limit) {
+        if (!bounded)
+          return { attrs, end: limit, selfClosing, unterminated: true };
+        raw = html.slice(k + 1, limit);
+        valueEnd = limit;
+      } else {
+        raw = html.slice(k + 1, close);
+        valueEnd = close + 1;
+      }
+    } else {
+      valueEnd = k;
+      while (
+        valueEnd < limit &&
+        !WS.test(html[valueEnd]) &&
+        html[valueEnd] !== ">"
+      )
+        valueEnd++;
+      raw = html.slice(k, valueEnd);
+    }
+    attrs.push([attrName, decodeEntities(raw, true)]);
+    j = valueEnd;
+  }
+  return { attrs, end: j, selfClosing, unterminated: false };
 }
 
 // Reads `html` once, the way the browser does, and returns what the scans in
@@ -113,16 +193,20 @@ interface Tag {
 // One forward pass per reading. A tag runs to the first `>` outside quotes, so a raw `<`,
 // `>` or `</svg>` inside a value (Astro keeps all three raw in expression
 // attributes) does not end it. A quote still open at the end of the input stops
-// the scan, and every search moves forward, so a malformed page can't make it
-// quadratic.
-function readMarkup(
+// the scan, and every search moves forward (a search that finds nothing is not
+// repeated), so a malformed page can't make it quadratic.
+export function readMarkup(
   html: string,
   { foreign, noscriptRaw }: Reading,
 ): { tags: Tag[]; decoded: string[] } {
   const tags: Tag[] = [];
   const decoded: string[] = [];
   let i = 0;
+  // Open `<svg>` and `<math>` elements; each end tag closes its own kind.
   let svgDepth = 0;
+  let mathDepth = 0;
+  // A search for these found nothing, so none after that point will either.
+  let noStyleEnd = false;
   // First match of `pattern` (a global regex) at or after `from`, or -1.
   const find = (pattern: RegExp, from: number) => {
     pattern.lastIndex = from;
@@ -143,11 +227,12 @@ function readMarkup(
     const lt = html.indexOf("<", i);
     if (lt === -1) break;
     i = lt;
+    const inForeign = svgDepth + mathDepth > 0;
     if (html.startsWith("<!--", i)) {
       i = endOfComment(i + 4);
       continue;
     }
-    if (html.startsWith("<![CDATA[", i) && svgDepth > 0) {
+    if (html.startsWith("<![CDATA[", i) && inForeign) {
       const end = find(/\]\]>/g, i + 9);
       i = end === -1 ? html.length : end;
       continue;
@@ -157,84 +242,118 @@ function readMarkup(
       i = afterNext(">", i + 2);
       continue;
     }
-    const head = /^<(\/?)([a-z][^ \t\n\f\r/>]*)/i.exec(html.slice(i, i + 64));
-    if (!head) {
+    const closing = html[i + 1] === "/";
+    const rawName = tagNameAt(html, i + (closing ? 2 : 1));
+    if (rawName === undefined) {
       i += 1;
       continue;
     }
-    const [, closing, rawName] = head;
     const name = rawName.toLowerCase();
-    const attrs: [string, string][] = [];
-    let j = i + head[0].length;
-    let selfClosing = false;
-    // Attributes, separated by whitespace or `/`, up to `>`.
-    for (;;) {
-      const separators = j;
-      while (j < html.length && (WS.test(html[j]) || html[j] === "/")) j++;
-      if (j >= html.length) break;
-      if (html[j] === ">") {
-        selfClosing = j > separators && html[j - 1] === "/";
-        break;
-      }
-      const nameStart = j;
-      while (j < html.length && !WS.test(html[j]) && !/[/>=]/.test(html[j]))
-        j++;
-      if (j === nameStart) j++; // a stray `=` where a name starts
-      const attrName = html.slice(nameStart, j).toLowerCase();
-      let k = j;
-      while (k < html.length && WS.test(html[k])) k++;
-      if (html[k] !== "=") {
-        attrs.push([attrName, ""]);
-        continue;
-      }
-      k++;
-      while (k < html.length && WS.test(html[k])) k++;
-      let valueEnd: number;
-      let raw: string;
-      if (html[k] === '"' || html[k] === "'") {
-        const close = html.indexOf(html[k], k + 1);
-        if (close === -1) return { tags, decoded };
-        raw = html.slice(k + 1, close);
-        valueEnd = close + 1;
-      } else {
-        valueEnd = k;
-        while (
-          valueEnd < html.length &&
-          !WS.test(html[valueEnd]) &&
-          html[valueEnd] !== ">"
-        )
-          valueEnd++;
-        raw = html.slice(k, valueEnd);
-      }
-      const value = decodeEntities(raw, true);
-      attrs.push([attrName, value]);
-      decoded.push(value);
-      j = valueEnd;
-    }
-    i = Math.min(j + 1, html.length);
+    const read = readAttributes(
+      html,
+      i + (closing ? 2 : 1) + rawName.length,
+      html.length,
+      false,
+    );
+    if (read.unterminated) return { tags, decoded };
+    const { attrs, selfClosing } = read;
+    for (const [, value] of attrs) decoded.push(value);
+    i = Math.min(read.end + 1, html.length);
     if (!closing) tags.push({ name, attrs });
     if (foreign && (name === "svg" || name === "math")) {
-      // A self-closing `<svg/>` opens nothing.
-      if (closing || !selfClosing)
-        svgDepth = Math.max(0, svgDepth + (closing ? -1 : 1));
+      // A self-closing `<svg/>` opens nothing; an end tag closes its own kind.
+      if (closing) {
+        if (name === "svg") svgDepth = Math.max(0, svgDepth - 1);
+        else mathDepth = Math.max(0, mathDepth - 1);
+      } else if (!selfClosing) {
+        if (name === "svg") svgDepth++;
+        else mathDepth++;
+      }
       continue;
     }
     if (closing) continue;
-    if (svgDepth > 0 && name === "style") {
+    if (inForeign && name === "style") {
       if (selfClosing) continue;
       // The text runs to `</style`, or, with none, to the end of the SVG.
-      let end = find(/<\/style(?=[ \t\n\f\r/>])/gi, i);
+      let end = noStyleEnd ? -1 : find(/<\/style(?=[ \t\n\f\r/>])/gi, i);
       if (end !== -1) end -= "</style".length;
-      else end = find(/<\/svg/gi, i) - "</svg".length;
+      else {
+        noStyleEnd = true;
+        end = find(/<\/svg/gi, i);
+        if (end !== -1) end -= "</svg".length;
+      }
       if (end < 0) end = html.length;
       decoded.push(decodeEntities(html.slice(i, end), false));
       i = end;
     } else if (
-      svgDepth === 0 &&
+      !inForeign &&
       (RAW_TEXT.has(name) || (noscriptRaw && name === "noscript"))
     ) {
       const end = find(new RegExp(`</${name}(?=[ \\t\\n\\f\\r/>])`, "gi"), i);
       i = end === -1 ? html.length : end - `</${name}`.length;
+    }
+  }
+  return { tags, decoded };
+}
+
+// A reading with no regions at all: every `<name` starts a tag, and its
+// attributes run to the next `>` or `<`, whichever comes first. Comments, raw
+// text, foreign content and quotes carry nothing from one tag to the next, so
+// whatever desyncs the readings above can't hide a tag from this pass past that
+// tag's own `>`. The price is that text the browser doesn't parse as tags (a
+// commented-out `<img>`, a string in a script) is reported too: that fails the
+// build, never the visitor. The text of a `<style>` inside an open `<svg>` or
+// `<math>` is decoded as well, as the browser parses it as markup. Linear: each
+// `>` is looked up once and each stretch of style text is decoded once.
+export function readFlat(html: string): { tags: Tag[]; decoded: string[] } {
+  const tags: Tag[] = [];
+  const decoded: string[] = [];
+  let gt = -1; // the first `>` at or after the last tag name, cached
+  let styleDone = 0; // style text before this index is already decoded
+  let noStyleEnd = false;
+  // Unclosed `<svg>`/`<math>` start tags, counted without regard to regions:
+  // a plain `<style>` is not decoded, as the browser doesn't.
+  let foreign = 0;
+  let from = 0;
+  for (;;) {
+    const lt = html.indexOf("<", from);
+    if (lt === -1) break;
+    from = lt + 1;
+    if (html[lt + 1] === "/") {
+      const ended = tagNameAt(html, lt + 2)?.toLowerCase();
+      if (ended === "svg" || ended === "math")
+        foreign = Math.max(0, foreign - 1);
+      continue;
+    }
+    const rawName = tagNameAt(html, lt + 1);
+    if (rawName === undefined) continue;
+    const nameEnd = lt + 1 + rawName.length;
+    if (gt < nameEnd) {
+      gt = html.indexOf(">", nameEnd);
+      if (gt === -1) gt = html.length;
+    }
+    const nextLt = html.indexOf("<", nameEnd);
+    const limit = nextLt === -1 ? gt : Math.min(gt, nextLt);
+    const { attrs } = readAttributes(html, nameEnd, limit, true);
+    for (const [, value] of attrs) decoded.push(value);
+    const name = rawName.toLowerCase();
+    tags.push({ name, attrs });
+    const selfClosing = gt < html.length && html[gt - 1] === "/";
+    if ((name === "svg" || name === "math") && !selfClosing) foreign++;
+    if (name === "style" && foreign > 0 && gt < html.length && !selfClosing) {
+      const start = Math.max(gt + 1, styleDone);
+      let end = noStyleEnd ? -1 : html.length;
+      if (!noStyleEnd) {
+        const close = /<\/style(?=[ \t\n\f\r/>])/gi;
+        close.lastIndex = start;
+        const m = close.exec(html);
+        if (m) end = m.index;
+        else noStyleEnd = true;
+      }
+      if (end === -1) end = html.length;
+      if (start < end)
+        decoded.push(decodeEntities(html.slice(start, end), false));
+      styleDone = Math.max(styleDone, end);
     }
   }
   return { tags, decoded };
@@ -247,10 +366,15 @@ export function findOffSiteRequests(source: string, ownHost: string): string[] {
     if (isOffSite(url, ownHost)) found.add(url.trim());
   };
 
-  // The union of every reading: a reading that loses sync with the browser can
-  // only hide a request from itself, not from the others.
+  // The union of every reading. A whole-page reading that loses sync with the
+  // browser hides requests from itself, and several can lose sync on the same
+  // page, so the region-free pass (`readFlat`) is unioned in as well: it bounds
+  // any desync to the tag's own `>`.
   const tags: Tag[] = [];
   const decoded: string[] = [];
+  const flat = readFlat(source);
+  for (const tag of flat.tags) tags.push(tag);
+  for (const text of flat.decoded) decoded.push(text);
   for (const foreign of [true, false]) {
     for (const noscriptRaw of [false, true]) {
       const read = readMarkup(source, { foreign, noscriptRaw });
