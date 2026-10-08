@@ -719,7 +719,6 @@ describe("findOffSiteRequests", () => {
   // T36 (review 2026-10-08, pass 8, G8-01 to G8-04).
   describe("flat pass fixes and the legacy scan (T36)", () => {
     const T = "https://t.example.com/p.png";
-    const IMG = `<img src="${T}">`;
     const ODD = `<script>const t = '<span title="';</script>`;
     const STYLE_URL = `.a{background:url(&quot;${T}&quot;)}`;
     const foreignOn: Reading = { foreign: true, noscriptRaw: false };

@@ -40,8 +40,8 @@
 | T33 | Off-site guard: reader desync (review R6-02)                                                  | tests  | pasichnyi | M        | T31                 | done    |
 | T34 | Off-site guard: region-free pass, svg/math depth, pin T33 fixes (review F7-01–F7-03)           | tests  | pasichnyi | M        | T33                 | done    |
 | T35 | T33 bookkeeping and ship drafts (review F7-04)                                                | docs   | pasichnyi | S        | T34                 | done    |
-| T36 | Off-site guard: flat-pass fixes, pre-T31 sixth member, mutant rows (review G8-01–G8-04)       | tests  | pasichnyi | M        | T34                 | todo    |
-| T37 | T35 status, tracker total, R6-02 wording (review G8-04)                                       | docs   | pasichnyi | S        | T36                 | todo    |
+| T36 | Off-site guard: flat-pass fixes, pre-T31 sixth member, mutant rows (review G8-01–G8-04)       | tests  | pasichnyi | M        | T34                 | done    |
+| T37 | T35 status, tracker total, R6-02 wording (review G8-04)                                       | docs   | pasichnyi | S        | T36                 | done    |
 
 **Total:** 35 tasks, ~16.3 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 
