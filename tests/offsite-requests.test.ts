@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   findOffSiteRequests,
+  legacyUrls,
   readFlat,
   readMarkup,
   type Reading,
@@ -707,6 +708,175 @@ describe("findOffSiteRequests", () => {
         "<a ".repeat(n * 2),
         `<${"a".repeat(1_000_000)}`,
         "<svg><p><style/>".repeat(n),
+      ]) {
+        const started = performance.now();
+        findOffSiteRequests(input, own);
+        expect(performance.now() - started).toBeLessThan(1000);
+      }
+    });
+  });
+
+  // T36 (review 2026-10-08, pass 8, G8-01 to G8-04).
+  describe("flat pass fixes and the legacy scan (T36)", () => {
+    const T = "https://t.example.com/p.png";
+    const IMG = `<img src="${T}">`;
+    const ODD = `<script>const t = '<span title="';</script>`;
+    const STYLE_URL = `.a{background:url(&quot;${T}&quot;)}`;
+    const foreignOn: Reading = { foreign: true, noscriptRaw: false };
+    const hasValue = (tags: { attrs: [string, string][] }[], value: string) =>
+      tags.some((tag) =>
+        tag.attrs.some(
+          ([n, v]) => (n === "src" || n === "href") && v === value,
+        ),
+      );
+    const decodedHas = (decoded: string[]) =>
+      decoded.some((v) => v.includes(T));
+
+    // A quoted '>' or '<' before the fetching attribute, after a desync: the
+    // legacy scan reads these, the region-free pass does not.
+    const quoted: [string, string][] = [
+      [
+        "a quoted '>' in an SVG <style>",
+        `<svg><style><img alt="a > b" src="${T}"></style></svg>`,
+      ],
+      [
+        "a quoted '<' in an SVG <style>",
+        `<svg><style><img alt="<" src="${T}"></style></svg>`,
+      ],
+      [
+        "a quoted '>' after a breakout script",
+        `<svg><title>${ODD}<img alt="a > b" src="${T}"></title></svg>`,
+      ],
+      [
+        "a quoted </style>",
+        `<svg><style><img title="</style>" src="${T}"></style></svg>`,
+      ],
+      [
+        "a quoted </svg>",
+        `<svg><title>${ODD}<img alt="</svg>" src="${T}"></title></svg>`,
+      ],
+      [
+        "a quoted 'a<b>' after a comment in an SVG <style>",
+        `<svg><style><!-- </style><a title=" --></style></svg><img alt="a<b>" src="${T}">`,
+      ],
+      [
+        "a quoted '<' before <link rel>",
+        `<svg><style><link alt="a<b" rel="stylesheet" href="${T}"></style></svg>`,
+      ],
+      [
+        "a quoted '<' before <image href>",
+        `<svg><style><image alt="a<b" href="${T}"/></style></svg>`,
+      ],
+    ];
+
+    it.each(quoted)("the union reports an image after %s", (_label, html) => {
+      expect(findOffSiteRequests(html, own)).toEqual([T]);
+    });
+
+    it.each(quoted)("the legacy scan alone reports %s", (_label, html) => {
+      expect(legacyUrls(html)).toContain(T);
+    });
+
+    it("the legacy scan reads src, poster and srcset after a quoted value", () => {
+      const html = `<video alt="a" src="https://s.example.com/a" poster='https://p.example.com/b' srcset="https://r.example.com/c 2x, /a.png 1x">`;
+      expect(legacyUrls(html).sort()).toEqual(
+        [
+          "/a.png",
+          "https://p.example.com/b",
+          "https://r.example.com/c",
+          "https://s.example.com/a",
+        ].sort(),
+      );
+    });
+
+    it("the legacy scan decodes entities and reads xlink:href and the last start", () => {
+      expect(
+        legacyUrls(`<img alt="a" src="&#104;ttps://d.example.com/a">`),
+      ).toEqual(["https://d.example.com/a"]);
+      expect(legacyUrls(`<use alt="a<b" xlink:href="${T}"/>`)).toEqual([T]);
+      expect(
+        legacyUrls(`<link rel=author <link rel=stylesheet href=${T}>`),
+      ).toContain(T);
+      expect(legacyUrls(`<link rel="author" href="${T}">`)).toEqual([]);
+    });
+
+    it("a plain <style> after a self-closing <svg/> or a closed <math> is not decoded", () => {
+      for (const html of [
+        `<svg/><style>${STYLE_URL}</style>`,
+        `<math><style>.a{}</math><p>url(&quot;${T}&quot;)</p>`,
+      ])
+        expect(findOffSiteRequests(html, own)).toEqual([]);
+    });
+
+    it("the legacy scan ignores plain links and own-host attributes", () => {
+      const html = `<a href="https://a.example.com/x">x</a><p data-src="${T}"></p>`;
+      expect(findOffSiteRequests(html, own)).toEqual([]);
+    });
+
+    // G8-03 (a): svg and math are counted apart, '/' in a value is no '/>'.
+    it("the region-free pass counts svg and math apart", () => {
+      const html = `<svg><p>${ODD}</math><svg></math><style>${STYLE_URL}</style></svg>`;
+      expect(decodedHas(readFlat(html).decoded)).toBe(true);
+    });
+
+    it("the region-free pass does not read '/' in an unquoted value as '/>'", () => {
+      const html = `<svg data-x=a/><style>${STYLE_URL}</style></svg>`;
+      expect(decodedHas(readFlat(html).decoded)).toBe(true);
+    });
+
+    // G8-03 (b): the flat style run ends where the SVG does.
+    it("the region-free pass ends an unterminated SVG <style> at </svg>", () => {
+      const html = `<svg><style>.a{}</svg><p>url(&quot;https://x.example.com/a.png&quot;)</p>`;
+      expect(findOffSiteRequests(html, own)).toEqual([]);
+    });
+
+    // G8-04: one row per surviving mutant.
+    it("reading alone: a tag name of 70 characters", () => {
+      const html = `<${"a".repeat(70)}='><img alt=">" src="${T}">`;
+      expect(hasValue(readMarkup(html, foreignOn).tags, T)).toBe(true);
+    });
+
+    it("reading alone: an SVG <style> ends at its own </style>", () => {
+      const html = `<svg><style>.a{}</style><title><img alt=">" src="${T}"></title></svg>`;
+      expect(hasValue(readMarkup(html, foreignOn).tags, T)).toBe(true);
+    });
+
+    it.each([
+      [
+        "a second SVG <style> after a first",
+        `<svg><style>.a{}</style></svg><svg><p>${ODD}<svg><style>${STYLE_URL}</style></svg>`,
+      ],
+      [
+        "an upper-case <STYLE>",
+        `<svg><p>${ODD}<svg><STYLE>${STYLE_URL}</STYLE></svg>`,
+      ],
+      [
+        "a single open <svg>",
+        `<div><svg><path d="M0"></div>${ODD}</svg><svg><style>${STYLE_URL}</style></svg>`,
+      ],
+    ])("the region-free pass decodes %s", (_label, html) => {
+      expect(decodedHas(readFlat(html).decoded)).toBe(true);
+    });
+
+    it("decoded values are unioned from every reading", () => {
+      const html = `<noscript><p title="</noscript><div title='<' style="background:url(&quot;${T}&quot;)"></div>`;
+      expect(findOffSiteRequests(html, own)).toEqual([T]);
+    });
+
+    // G8-01: no input is quadratic.
+    it("stays linear on tag names that contain '<' and on repeated tag starts", () => {
+      for (const input of [
+        "<a".repeat(500000),
+        '<a"'.repeat(333334),
+        "<a=".repeat(333334),
+        "<svg<".repeat(200000),
+        "<link ".repeat(160000),
+        "<image ".repeat(130000),
+        "<link a='".repeat(110000),
+        ' src="'.repeat(160000),
+        " src=".repeat(200000),
+        `src${" ".repeat(1_000_000)}`,
+        "<link ".repeat(80000) + ">",
       ]) {
         const started = performance.now();
         findOffSiteRequests(input, own);

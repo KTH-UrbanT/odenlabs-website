@@ -1,6 +1,8 @@
 // Finds requests a built page or stylesheet would make to another host
 // (spec §6 NFR: third-party requests 0). Plain `<a href>` links and `mailto:`
-// are navigation, not requests, and are not reported.
+// are navigation, not requests, and are not reported. Some inputs the browser
+// doesn't parse as tags are reported too (a commented-out `<img>`, a string in
+// a script, text in a `<textarea>`): that fails the build, never the visitor.
 
 // `<link>` relations that make the browser fetch the target.
 const FETCHING_REL =
@@ -102,9 +104,17 @@ export interface Tag {
 // whitespace, `/` or `>` like the browser's tag-name state.
 const TAG_NAME = /[a-z][^ \t\n\f\r/>]*/iy;
 
-function tagNameAt(html: string, from: number): string | undefined {
-  TAG_NAME.lastIndex = from;
-  return TAG_NAME.exec(html)?.[0];
+// The region-free pass also stops a name at `<`, so a run of `<a<a<a…` is one
+// short name per `<` and not one long name rescanned from every `<`.
+const FLAT_NAME = /[a-z][^ \t\n\f\r/><]*/iy;
+
+function tagNameAt(
+  html: string,
+  from: number,
+  pattern = TAG_NAME,
+): string | undefined {
+  pattern.lastIndex = from;
+  return pattern.exec(html)?.[0];
 }
 
 interface Attributes {
@@ -132,7 +142,11 @@ function readAttributes(
   for (;;) {
     const separators = j;
     while (j < limit && (WS.test(html[j]) || html[j] === "/")) j++;
-    if (j >= limit) break;
+    if (j >= limit) {
+      // Stopped at a `>` the caller found (the region-free pass).
+      if (html[j] === ">") selfClosing = j > separators && html[j - 1] === "/";
+      break;
+    }
     if (html[j] === ">") {
       selfClosing = j > separators && html[j - 1] === "/";
       break;
@@ -274,13 +288,15 @@ export function readMarkup(
     if (closing) continue;
     if (inForeign && name === "style") {
       if (selfClosing) continue;
-      // The text runs to `</style`, or, with none, to the end of the SVG.
+      // The text runs to `</style`, or, with none, to the end of the SVG or
+      // MathML element.
       let end = noStyleEnd ? -1 : find(/<\/style(?=[ \t\n\f\r/>])/gi, i);
       if (end !== -1) end -= "</style".length;
       else {
         noStyleEnd = true;
-        end = find(/<\/svg/gi, i);
-        if (end !== -1) end -= "</svg".length;
+        const close = /<\/(?:svg|math)/gi;
+        close.lastIndex = i;
+        end = close.exec(html)?.index ?? -1;
       }
       if (end < 0) end = html.length;
       decoded.push(decodeEntities(html.slice(i, end), false));
@@ -300,32 +316,38 @@ export function readMarkup(
 // attributes run to the next `>` or `<`, whichever comes first. Comments, raw
 // text, foreign content and quotes carry nothing from one tag to the next, so
 // whatever desyncs the readings above can't hide a tag from this pass past that
-// tag's own `>`. The price is that text the browser doesn't parse as tags (a
-// commented-out `<img>`, a string in a script) is reported too: that fails the
-// build, never the visitor. The text of a `<style>` inside an open `<svg>` or
-// `<math>` is decoded as well, as the browser parses it as markup. Linear: each
-// `>` is looked up once and each stretch of style text is decoded once.
+// tag's first `>` or `<`. (A `>` or `<` inside a quoted value still cuts the tag
+// short: `legacyUrls` covers `src`, `poster` and `srcset` after a quoted value,
+// and `<link>`, `<image>` and `<use>` holding a `<`.) The price is that text the browser doesn't parse as
+// tags is reported too: a commented-out `<img>`, a string in a script, the text
+// of a `<textarea>` or `<title>`, an attribute value holding markup. That fails
+// the build, never the visitor. The text of a `<style>` inside an open `<svg>` or
+// `<math>` is decoded as well, as the browser parses it as markup, up to its
+// `</style>`, `</svg>` or `</math>`. Linear: each `>` is looked up once and each
+// stretch of style text is decoded once.
 export function readFlat(html: string): { tags: Tag[]; decoded: string[] } {
   const tags: Tag[] = [];
   const decoded: string[] = [];
   let gt = -1; // the first `>` at or after the last tag name, cached
   let styleDone = 0; // style text before this index is already decoded
   let noStyleEnd = false;
-  // Unclosed `<svg>`/`<math>` start tags, counted without regard to regions:
-  // a plain `<style>` is not decoded, as the browser doesn't.
-  let foreign = 0;
+  // Unclosed `<svg>`/`<math>` start tags, counted without regard to regions
+  // (`<svg>` in a script counts): a plain `<style>` is not decoded, as the
+  // browser doesn't.
+  let svgDepth = 0;
+  let mathDepth = 0;
   let from = 0;
   for (;;) {
     const lt = html.indexOf("<", from);
     if (lt === -1) break;
     from = lt + 1;
     if (html[lt + 1] === "/") {
-      const ended = tagNameAt(html, lt + 2)?.toLowerCase();
-      if (ended === "svg" || ended === "math")
-        foreign = Math.max(0, foreign - 1);
+      const ended = tagNameAt(html, lt + 2, FLAT_NAME)?.toLowerCase();
+      if (ended === "svg") svgDepth = Math.max(0, svgDepth - 1);
+      else if (ended === "math") mathDepth = Math.max(0, mathDepth - 1);
       continue;
     }
-    const rawName = tagNameAt(html, lt + 1);
+    const rawName = tagNameAt(html, lt + 1, FLAT_NAME);
     if (rawName === undefined) continue;
     const nameEnd = lt + 1 + rawName.length;
     if (gt < nameEnd) {
@@ -334,29 +356,105 @@ export function readFlat(html: string): { tags: Tag[]; decoded: string[] } {
     }
     const nextLt = html.indexOf("<", nameEnd);
     const limit = nextLt === -1 ? gt : Math.min(gt, nextLt);
-    const { attrs } = readAttributes(html, nameEnd, limit, true);
+    const { attrs, selfClosing: closed } = readAttributes(
+      html,
+      nameEnd,
+      limit,
+      true,
+    );
     for (const [, value] of attrs) decoded.push(value);
     const name = rawName.toLowerCase();
     tags.push({ name, attrs });
-    const selfClosing = gt < html.length && html[gt - 1] === "/";
-    if ((name === "svg" || name === "math") && !selfClosing) foreign++;
-    if (name === "style" && foreign > 0 && gt < html.length && !selfClosing) {
+    const selfClosing = closed;
+    if (!selfClosing) {
+      if (name === "svg") svgDepth++;
+      else if (name === "math") mathDepth++;
+    }
+    if (
+      name === "style" &&
+      svgDepth + mathDepth > 0 &&
+      gt < html.length &&
+      !selfClosing
+    ) {
       const start = Math.max(gt + 1, styleDone);
-      let end = noStyleEnd ? -1 : html.length;
+      let end = html.length;
       if (!noStyleEnd) {
-        const close = /<\/style(?=[ \t\n\f\r/>])/gi;
+        const close = /<\/(?:style|svg|math)(?=[ \t\n\f\r/>])/gi;
         close.lastIndex = start;
         const m = close.exec(html);
         if (m) end = m.index;
         else noStyleEnd = true;
       }
-      if (end === -1) end = html.length;
       if (start < end)
         decoded.push(decodeEntities(html.slice(start, end), false));
       styleDone = Math.max(styleDone, end);
     }
   }
   return { tags, decoded };
+}
+
+// The scans the guard used before it read tags (commit 330d079), kept as a
+// member of the union: they find an attribute anywhere in the source, not inside
+// a tag, so no region, quote or `>` before it can hide it. `src`, `poster` and
+// `srcset` count only right after a closing quote (`alt="a > b" src=…`, as Astro
+// writes every attribute), so escaped page text such as `&lt;img src="…"&gt;`
+// is not reported. They over-report otherwise (`"x" src="y"` in page text) and
+// that fails the build, never the visitor. `<link>`, `<image>` and `<use>` need
+// their tag: the attributes run to the first `>`, read for the first and the
+// last start before that `>`, so a run of starts is not rescanned from each one.
+// A quoted `>` before their `rel`/`href` is not covered (the old scan missed it too).
+const VALUE = String.raw`\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))`;
+const attrPattern = (name: string, afterQuote = false) =>
+  new RegExp(
+    (afterQuote ? String.raw`(?<=["'])\s+` : String.raw`(?:^|\s)`) +
+      name +
+      VALUE,
+    afterQuote ? "gi" : "i",
+  );
+const legacyValue = (m: RegExpMatchArray) =>
+  decodeEntities(m[1] ?? m[2] ?? m[3], true);
+
+export function legacyUrls(source: string): string[] {
+  const urls: string[] = [];
+  for (const name of ["src", "poster", "srcset"]) {
+    for (const m of source.matchAll(attrPattern(name, true))) {
+      const value = legacyValue(m);
+      if (name === "srcset") {
+        for (const candidate of value.split(","))
+          urls.push(candidate.trim().split(/\s+/)[0]);
+      } else urls.push(value);
+    }
+  }
+  const starts = [...source.matchAll(/<(link|image|use)(?=[\s/>])/gi)];
+  let gt = -1;
+  let previousGt = -2;
+  for (let n = 0; n < starts.length; n++) {
+    const start = starts[n].index + starts[n][0].length;
+    if (gt < start) {
+      gt = source.indexOf(">", start);
+      if (gt === -1) gt = source.length;
+    }
+    // Skip the starts in the middle of a run that shares one `>`.
+    const sameAsPrevious = gt === previousGt;
+    const sameAsNext =
+      n + 1 < starts.length &&
+      starts[n + 1].index < gt &&
+      starts[n + 1].index > start;
+    previousGt = gt;
+    if (sameAsPrevious && sameAsNext) continue;
+    const attrs = source.slice(start, gt);
+    const name = starts[n][1].toLowerCase();
+    if (name === "link") {
+      const rel = attrs.match(attrPattern("rel"));
+      const href = attrs.match(attrPattern("href"));
+      if (href && FETCHING_REL.test(rel ? legacyValue(rel) : ""))
+        urls.push(legacyValue(href));
+    } else {
+      const href = attrs.match(attrPattern("(?:xlink:)?href"));
+      if (href) urls.push(legacyValue(href));
+    }
+  }
+  return urls;
 }
 
 /** Every off-site URL that `source` (HTML or CSS) makes the browser request. */
@@ -368,8 +466,9 @@ export function findOffSiteRequests(source: string, ownHost: string): string[] {
 
   // The union of every reading. A whole-page reading that loses sync with the
   // browser hides requests from itself, and several can lose sync on the same
-  // page, so the region-free pass (`readFlat`) is unioned in as well: it bounds
-  // any desync to the tag's own `>`.
+  // page, so the region-free pass (`readFlat`) is unioned in as well, and the
+  // attribute scans that need no tag (`legacyUrls`).
+  for (const url of legacyUrls(source)) add(url);
   const tags: Tag[] = [];
   const decoded: string[] = [];
   const flat = readFlat(source);
