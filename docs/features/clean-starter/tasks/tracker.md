@@ -43,7 +43,7 @@
 | T36 | Off-site guard: flat-pass fixes, pre-T31 sixth member, mutant rows (review G8-01–G8-04)       | tests  | pasichnyi | M        | T34                 | done    |
 | T37 | T35 status, tracker total, R6-02 wording (review G8-04)                                       | docs   | pasichnyi | S        | T36                 | done    |
 
-**Total:** 35 tasks, ~16.3 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
+**Total:** 37 tasks, ~17.4 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 
 **Blocked (2026-10-04):** T5 waits for the front-page copy (who-we-are paragraph and
 contact route, spec §8). T6 waits for T5 and for the maintainer's font choice and
@@ -63,4 +63,4 @@ before/after sign-off. T7 waits for T6.
 
 **Review follow-ups, 7th pass (2026-10-08):** T34–T35 done (F7-01 to F7-04 fixed); F7-01 reopened R6-02 and T34 closes it. Re-review pending.
 
-**Review follow-ups, 8th pass (2026-10-08):** T36–T37 added (G8-01 to G8-04, all fix-now); R6-02 reopened until T36 is done.
+**Review follow-ups, 8th pass (2026-10-08):** T36–T37 done (G8-01 to G8-04 fixed); R6-02 closed again by T36. Re-review pending.
