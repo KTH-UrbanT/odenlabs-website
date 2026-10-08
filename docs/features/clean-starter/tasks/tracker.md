@@ -38,10 +38,10 @@
 | T31 | Off-site guard: additive decoding, one attribute reader, regions (review F5-01–F5-05)         | tests  | pasichnyi | M        | T29                 | done    |
 | T32 | US-06 malformed-path, sad Flow 5 deletion-off stops (review F5-06)                            | docs   | pasichnyi | S        | —                   | done    |
 | T33 | Off-site guard: reader desync (review R6-02)                                                  | tests  | pasichnyi | M        | T31                 | done    |
-| T34 | Off-site guard: region-free pass, svg/math depth, pin T33 fixes (review F7-01–F7-03)           | tests  | pasichnyi | M        | T33                 | done     |
-| T35 | T33 bookkeeping and ship drafts (review F7-04)                                                | docs   | pasichnyi | S        | T34                 | done     |
+| T34 | Off-site guard: region-free pass, svg/math depth, pin T33 fixes (review F7-01–F7-03)           | tests  | pasichnyi | M        | T33                 | done    |
+| T35 | T33 bookkeeping and ship drafts (review F7-04)                                                | docs   | pasichnyi | S        | T34                 | done    |
 
-**Total:** 32 tasks, ~14.6 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
+**Total:** 35 tasks, ~16.3 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 
 **Blocked (2026-10-04):** T5 waits for the front-page copy (who-we-are paragraph and
 contact route, spec §8). T6 waits for T5 and for the maintainer's font choice and
@@ -59,4 +59,4 @@ before/after sign-off. T7 waits for T6.
 
 **Review follow-ups, 6th pass (2026-10-07):** T33 done; R6-01, R6-03, R6-04 deferred.
 
-**Review follow-ups, 7th pass (2026-10-08):** T34–T35 added (F7-01 to F7-04, all fix-now); not yet done.
+**Review follow-ups, 7th pass (2026-10-08):** T34–T35 done (F7-01 to F7-04 fixed); F7-01 reopened R6-02 and T34 closes it. Re-review pending.

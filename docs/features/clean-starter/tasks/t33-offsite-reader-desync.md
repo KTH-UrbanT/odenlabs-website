@@ -25,19 +25,19 @@ read as markup and an odd quote swallows a later `<img src>`.
 
 ## Checklist
 
-- [ ] A self-closing start tag (`/` right before `>`, not inside an unquoted value) does not raise the SVG depth and does not start an SVG `<style>` text run.
+- [x] A self-closing start tag (`/` right before `>`, not inside an unquoted value) does not raise the SVG depth and does not start an SVG `<style>` text run.
       Repro: `<svg/><script>const t = '<span title="';</script><img src="https://tracker.example.com/pixel.png">`.
-- [ ] Run the reader under more than one reading of the page and union the tag lists and decoded values (the result stays additive):
+- [x] Run the reader under more than one reading of the page and union the tag lists and decoded values (the result stays additive):
       foreign content on (`<svg>`, `<math>` raise the depth) and off (HTML only), `<noscript>` as markup and as raw text (scripting on).
       Repros: `<svg><foreignObject><script>x='<span title="';</script><img src="https://t.example.com/p.png"></foreignObject></svg>`;
       `<math><desc>`-style and `<svg><p>` breakouts followed by a script with an odd quote and an `<img src>`;
       `<noscript><script>x='<a title="'</script></noscript><img src="https://t.example.com/p.png">`.
-- [ ] `</SVG>` in upper case ends the unterminated-`<style>` fallback (`indexOf("</svg")` is case-sensitive).
-- [ ] Whitespace is HTML whitespace only (tab, LF, FF, CR, space): NBSP before a quote is part of an unquoted value.
+- [x] `</SVG>` in upper case ends the unterminated-`<style>` fallback (`indexOf("</svg")` is case-sensitive).
+- [x] Whitespace is HTML whitespace only (tab, LF, FF, CR, space): NBSP before a quote is part of an unquoted value.
       Repro: `<a title= "><img src="https://t.example.com/p.png">` reports the image.
-- [ ] Keep every T29/T31 case and the review's "checked and sound" list passing; every scan stays linear (< 1 s on the existing pathological inputs, with the extra passes).
+- [x] Keep every T29/T31 case and the review's "checked and sound" list passing; every scan stays linear (< 1 s on the existing pathological inputs, with the extra passes).
 
 ## Definition of Done
 
-- [ ] each repro above reports its URL; own-host and relative URLs, `&Colon;` and the current build still report nothing
-- [ ] `npm run lint && npm test` clean
+- [x] each repro above reports its URL; own-host and relative URLs, `&Colon;` and the current build still report nothing
+- [x] `npm run lint && npm test` clean
