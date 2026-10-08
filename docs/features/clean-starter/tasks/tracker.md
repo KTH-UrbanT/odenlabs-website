@@ -43,9 +43,9 @@
 | T36 | Off-site guard: flat-pass fixes, pre-T31 sixth member, mutant rows (review G8-01–G8-04)       | tests  | pasichnyi | M        | T34                 | done    |
 | T37 | T35 status, tracker total, R6-02 wording (review G8-04)                                       | docs   | pasichnyi | S        | T36                 | done    |
 | T38 | Off-site guard: legacy scan after bare attributes, mutant rows, header, time budget (H9-01–H9-04) | tests  | pasichnyi | M        | T36                 | done    |
-| T39 | Bookkeeping after T38 (review H9-01, H9-04)                                                   | docs   | pasichnyi | S        | T38                 | todo    |
+| T39 | Bookkeeping after T38 (review H9-01, H9-04)                                                   | docs   | pasichnyi | S        | T38                 | done    |
 
-**Total:** 37 tasks, ~17.4 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
+**Total:** 39 tasks, ~18.4 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 
 **Blocked (2026-10-04):** T5 waits for the front-page copy (who-we-are paragraph and
 contact route, spec §8). T6 waits for T5 and for the maintainer's font choice and
@@ -67,4 +67,4 @@ before/after sign-off. T7 waits for T6.
 
 **Review follow-ups, 8th pass (2026-10-08):** T36–T37 done (G8-01 to G8-04 fixed); R6-02 closed again by T36. Re-review pending.
 
-**Review follow-ups, 9th pass (2026-10-09):** T38–T39 added (H9-01 to H9-04, all fix-now); R6-02 reopened until T38 is done.
+**Review follow-ups, 9th pass (2026-10-09):** T38–T39 done (H9-01 to H9-04 fixed); R6-02 closed again by T38. Re-review pending.
