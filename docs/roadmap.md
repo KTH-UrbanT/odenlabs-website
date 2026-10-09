@@ -19,7 +19,7 @@ A small English-only site with the research group's own identity is live at KTH,
 
 | # | Step | Source | Size | Status |
 |---|---|---|:---:|---|
-| 1 | Set the group's identity on the new skeleton (restyle logo and theme; skeleton itself comes from `/sdd:scaffold`); also removes the starter from the live server (cleanup half of step 8) and ships a minimal who-we-are front page (slice of step 2) | idea-brief.md §1 Raw idea; §8 Open questions | M | spec'd → [`features/clean-starter/`](features/clean-starter/) |
+| 1 | Set the group's identity on the new skeleton (restyle logo and theme; skeleton itself comes from `/sdd:scaffold`); also removes the starter from the live server (cleanup half of step 8) and ships a minimal who-we-are front page (slice of step 2) | idea-brief.md §1 Raw idea; §8 Open questions | M | partly shipped (AC-05 identity, AC-15 front-page copy wait on maintainer) → [`features/clean-starter/`](features/clean-starter/) |
 | 2 | Front page "who we are" with equal paths to Research, People and Join/Contact | idea-brief.md §7 Recommendation | M | idea |
 | 3 | People pages: members and bios | idea-brief.md §7 Recommendation | M | idea |
 | 4 | Join / Contact page | idea-brief.md §7 Recommendation | S | idea |
@@ -89,3 +89,4 @@ Fog steps (5, 7) have no wave; their recon passes run alongside. Hosting recon i
 
 | Step | Shipped | Link |
 |---|---|---|
+| 1 (partial) | 2026-10-09 | [changelog](features/clean-starter/changelog.md); PR pending |
