@@ -731,6 +731,39 @@
       ],
       "file": "docs/features/clean-starter/tasks/t39-docs-sync-8.md",
       "source": "review-2026-10-09 H9-01, H9-04"
+    },
+    {
+      "id": "T40",
+      "title": "Off-site guard: one whitespace rule in the legacy scan, no swallowed values, true comments, mutant rows",
+      "layer": "tests",
+      "deps": [
+        "T38"
+      ],
+      "acs": [],
+      "dod": "legacy matches start at HTML whitespace and walk back over the same class, so NBSP, \\v and U+3000 runs are linear and an NBSP before src still reports; a rejected candidate no longer swallows a later src; the header, the legacyUrls comment and spec 8 R6-02 state the real residuals and false positives; one test row per surviving mutant and none that hides a request survives; the current build passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t40-offsite-legacy-whitespace.md",
+      "source": "review-2026-10-09-2 J10-01, J10-02, J10-03, J10-04"
+    },
+    {
+      "id": "T41",
+      "title": "Bookkeeping after T40",
+      "layer": "docs",
+      "deps": [
+        "T40"
+      ],
+      "acs": [],
+      "dod": "tracker, spec 8 R6-02, pr-body and changelog agree with the code at HEAD",
+      "files_hint": [
+        "docs/features/clean-starter/tasks/tracker.md",
+        "docs/features/clean-starter/spec.md",
+        "docs/features/clean-starter/pr-body.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t41-docs-sync-9.md",
+      "source": "review-2026-10-09-2 J10-03"
     }
   ]
 }

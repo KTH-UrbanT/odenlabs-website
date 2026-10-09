@@ -44,6 +44,8 @@
 | T37 | T35 status, tracker total, R6-02 wording (review G8-04)                                       | docs   | pasichnyi | S        | T36                 | done    |
 | T38 | Off-site guard: legacy scan after bare attributes, mutant rows, header, time budget (H9-01–H9-04) | tests  | pasichnyi | M        | T36                 | done    |
 | T39 | Bookkeeping after T38 (review H9-01, H9-04)                                                   | docs   | pasichnyi | S        | T38                 | done    |
+| T40 | Off-site guard: legacy scan whitespace, wording, mutant rows (review J10-01–J10-04)           | tests  | pasichnyi | M        | T38                 | todo    |
+| T41 | Bookkeeping after T40 (review J10-03)                                                         | docs   | pasichnyi | S        | T40                 | todo    |
 
 **Total:** 39 tasks, ~18.4 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 
@@ -68,3 +70,5 @@ before/after sign-off. T7 waits for T6.
 **Review follow-ups, 8th pass (2026-10-08):** T36–T37 done (G8-01 to G8-04 fixed); R6-02 closed again by T36. Re-review pending.
 
 **Review follow-ups, 9th pass (2026-10-09):** T38–T39 done (H9-01 to H9-04 fixed); R6-02 closed again by T38. Re-review pending.
+
+**Review follow-ups, 10th pass (2026-10-09):** T40–T41 added (J10-01 to J10-04, all fix-now); R6-02 reopened until T40 is done.
