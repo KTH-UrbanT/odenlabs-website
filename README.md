@@ -1,48 +1,50 @@
-# [Hugo Research Group Theme](https://github.com/wowchemy/starter-hugo-research-group)
+# Oden Lab website
 
-[![Screenshot](preview.png)](https://hugoblox.com/hugo-themes/)
+The website of the Oden Lab research group at KTH, built with [Astro](https://astro.build)
+as a static site and published at <https://oden.abe.kth.se/>.
 
-The **Research Group Template** empowers your research group to easily create a beautiful website with a stunning homepage, news, academic publications, events, team profiles, and a contact form.
+## Run it locally
 
-️**Trusted by 250,000+ researchers, educators, and students.** Highly customizable via the integrated **no-code, widget-based Wowchemy page builder**, making every site truly personalized ⭐⭐⭐⭐⭐
+```sh
+nvm use          # Node version from .nvmrc
+npm ci
+npm run dev      # http://localhost:4321
+```
 
-[![Get Started](https://img.shields.io/badge/-Get%20started-ff4655?style=for-the-badge)](https://hugoblox.com/hugo-themes/)
-[![Discord](https://img.shields.io/discord/722225264733716590?style=for-the-badge)](https://discord.com/channels/722225264733716590/742892432458252370/742895548159492138)  
-[![Twitter Follow](https://img.shields.io/twitter/follow/GetResearchDev?label=Follow%20on%20Twitter)](https://twitter.com/wowchemy)
+Before pushing: `npm run lint && npm test`.
 
-Easily write technical content with plain text Markdown, LaTeX math, diagrams, RMarkdown, or Jupyter, and import publications from BibTeX.
+## Edit content
 
-[Check out the latest demo](https://research-group.netlify.app/) of what you'll get in less than 60 seconds, or [view the showcase](https://hugoblox.com/creators/).
+All content is Markdown files under `src/content/`. The file name is the entry's ID,
+in kebab-case. Each folder has a `README.md` listing the fields.
 
-The integrated [**Wowchemy**](https://hugoblox.com) website builder and CMS makes it easy to create a beautiful website for free. Edit your site in the CMS (or your favorite editor), generate it with [Hugo](https://github.com/gohugoio/hugo), and deploy with GitHub or Netlify. Customize anything on your site with widgets, light/dark themes, and language packs.
+- **Add a research theme:** create `src/content/themes/<theme-id>.md` with `title` and
+  `summary`.
+- **Add a person:** create `src/content/people/<first-last>.md` with `name` and `role`.
+  List their themes by ID (`themes: [urban-energy]`). Put a photo next to the file and
+  point `photo:` at it.
+- **Add a project:** create `src/content/projects/<project-id>.md` with `title`,
+  `summary` and at least one theme ID; list members by person ID.
 
-- 👉 [**Get Started**](https://hugoblox.com/hugo-themes/)
-- 📚 [View the **documentation**](https://docs.hugoblox.com/)
-- 💬 [Chat with the **Wowchemy research community**](https://discord.gg/z8wNYzb) or [**Hugo community**](https://discourse.gohugo.io)
-- ⬇️ **Automatically import citations from BibTeX** with the [Hugo Academic CLI](https://github.com/GetRD/academic-file-converter)
-- 🐦 Share your new site with the community: [@wowchemy](https://twitter.com/wowchemy) [@GeorgeCushen](https://twitter.com/GeorgeCushen) [#MadeWithWowchemy](https://twitter.com/search?q=%23MadeWithWowchemy&src=typed_query)
-- 🗳 [Take the survey and help us improve #OpenSource](https://forms.gle/NioD9VhUg7PNmdCAA)
-- 🚀 [Contribute improvements](https://github.com/HugoBlox/hugo-blox-builder/blob/main/CONTRIBUTING.md) or [suggest improvements](https://github.com/HugoBlox/hugo-blox-builder/issues)
-- ⬆️ **Updating?** View the [Update Guide](https://docs.hugoblox.com/hugo-tutorials/update/) and [Release Notes](https://github.com/HugoBlox/hugo-blox-builder/releases)
+If a field is missing or an ID points at an entry that does not exist, the build fails
+and tells you which file to fix, so a mistake never reaches the live site.
 
-## We ask you, humbly, to support this open source movement
+## Publishing
 
-Today we ask you to defend the open source independence of the Wowchemy website builder and themes 🐧
+Merging to `main` publishes the site to the shared KTH server folder. A publish
+removes only files the site itself published or a maintainer approved, and stops
+before changing anything when something looks wrong. How it decides, the rules files
+and the rollout steps: [`deploy/README.md`](deploy/README.md).
 
-We're an open source movement that depends on your support to stay online and thriving, but 99.9% of our creators don't give; they simply look the other way.
+## Deploy
 
-### [❤️ Click here to become a GitHub Sponsor, unlocking awesome perks such as _exclusive academic templates and widgets_](https://github.com/sponsors/gcushen)
+GitHub Actions (`.github/workflows/publish.yaml`):
 
-## Demo credits
+- **Pull requests:** install, lint, test and build. Merge only when it is green.
+- **Push to `main`:** the same checks, then the publish job runs the guarded worker
+  (`node deploy/publish.ts`). It plans the publish, stops before any change when
+  something looks wrong, and only then swaps the build into place over SSH. The server
+  secrets live in the `kth-server` environment, which only `main` can use. Details:
+  [`deploy/README.md`](deploy/README.md).
 
-Please replace the demo images with your own.
-
-- [Female scientist](https://unsplash.com/photos/uVnRa6mOLOM)
-- [2 Coders](https://unsplash.com/photos/kwzWjTnDPLk)
-- [Cafe](https://unsplash.com/photos/RnDGGnMEOao)
-- Blog posts
-  - https://unsplash.com/photos/AndE50aaHn4
-  - https://unsplash.com/photos/OYzbqk2y26c
-- Avatars
-  - https://unsplash.com/photos/5yENNRbbat4
-  - https://unsplash.com/photos/WNoLnJo7tS8
+So publishing an update is: edit a file, open a pull request, merge.

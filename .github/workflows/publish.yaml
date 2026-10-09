@@ -1,36 +1,98 @@
-name: Deploy website to KTH virtual server
-
-env:
-  WC_HUGO_VERSION: "0.135.0"
+name: Check and deploy
 
 on:
+  pull_request:
   push:
     branches: ["main"]
   workflow_dispatch:
 
+# The job token is read-only; nothing here pushes or comments.
+permissions:
+  contents: read
+
+# Superseded pull-request checks are cancelled; a publish never is, because a
+# cancelled publish could stop mid-swap.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  deploy:
+  check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Hugo
-        uses: peaceiris/actions-hugo@v3
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          hugo-version: ${{ env.WC_HUGO_VERSION }}
-          extended: true
+          node-version-file: .nvmrc
+          cache: npm
 
-      - name: Build site with Hugo
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (types, content schema, formatting)
+        run: npm run lint
+
+      - name: Test (unit + build smoke test)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload site
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist/
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # The SSH secrets live in this environment, which only main may use
+    # (ADR-0005), so no pull-request run can reach the server.
+    environment: kth-server
+    concurrency:
+      group: deploy-kth
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Download site
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
+
+      # Plans against the publish record and the rules in deploy/rules/, stops
+      # before any change when a guard fails, and writes only counts to the
+      # log; the full report is encrypted to the maintainers (ADR-0002/0004).
+      - name: Publish to the KTH server
+        run: node deploy/publish.ts
         env:
-          HUGO_ENVIRONMENT: production
-        run: hugo --minify
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_TARGET_DIR: ${{ secrets.SSH_TARGET_DIR }}
+          # Keep in step with `site` in astro.config.mjs.
+          SITE_URL: https://oden.abe.kth.se/
+          REPORT_FILE: publish-report.gpg
 
-      - name: Copy site to KTH server via SSH
-        uses: appleboy/scp-action@v0.1.7
+      - name: Keep the encrypted publish report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "public/*"
-          target: ${{ secrets.SSH_TARGET_DIR }}
+          name: publish-report
+          path: publish-report.gpg
+          if-no-files-found: ignore

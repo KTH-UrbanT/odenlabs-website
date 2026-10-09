@@ -1,0 +1,486 @@
+// The publish planner: the pure core of the publish worker (ADR-0002).
+// Everything here is a function of its inputs: no file system, network or
+// clock. The shell (publish.ts) gathers the inputs and applies the plan.
+//
+// Run directly by Node (`node deploy/publish.ts`), so only erasable
+// TypeScript: no enums, no parameter properties, `.ts` import extensions.
+
+// --- Model -----------------------------------------------------------------
+
+export type Deletion = "on" | "off";
+
+export interface Settings {
+  deletion: Deletion;
+  removalLimit: 20;
+}
+
+export interface Rules {
+  protected: string[];
+  approved: string[];
+  settings: Settings;
+}
+
+export interface RecordedFile {
+  path: string;
+  sha256: string;
+}
+
+/** `.publish-record.json`: what the last publish uploaded (data-model.md). */
+export interface PublishRecord {
+  version: 1;
+  commit: string;
+  publishedAt: string;
+  files: RecordedFile[];
+}
+
+export const RECORD_FILE = ".publish-record.json";
+export const STAGING_DIR = ".publish-staging";
+export const FRONT_PAGE = "index.html";
+export const LOGO = "logo.svg";
+export const REMOVAL_LIMIT = 20;
+
+// --- Paths -----------------------------------------------------------------
+
+/**
+ * A server path relative to the target folder, or null when malformed:
+ * absolute, empty, with an empty, `.` or `..` segment, or a control
+ * character. A single leading `./` (as `find .` prints it) is stripped.
+ */
+export function normalisePath(raw: string): string | null {
+  const path = raw.startsWith("./") ? raw.slice(2) : raw;
+  if (path === "" || path.startsWith("/")) return null;
+  if (/[\u0000-\u001f\u007f]/.test(path)) return null;
+  const segments = path.split("/");
+  if (segments.some((s) => s === "" || s === "." || s === "..")) return null;
+  return path;
+}
+
+/** The record and the staging folder are never listed or classified. */
+export function isOutsideListing(path: string): boolean {
+  return (
+    path === RECORD_FILE ||
+    path === STAGING_DIR ||
+    path.startsWith(`${STAGING_DIR}/`)
+  );
+}
+
+// --- Rules files ------------------------------------------------------------
+
+/** One path per line; blank lines and `#` comments ignored; no globs. */
+export function parseRuleList(text: string, fileName: string): string[] {
+  const paths: string[] = [];
+  const problems: string[] = [];
+  text.split("\n").forEach((rawLine, i) => {
+    const line = rawLine.replace(/\r$/, "");
+    if (line.trim() === "" || line.startsWith("#")) return;
+    const where = `${fileName}:${i + 1}`;
+    const path = normalisePath(line);
+    if (/[*?[\]]/.test(line)) problems.push(`${where}: glob not allowed`);
+    else if (path === null || line !== line.trim()) {
+      problems.push(`${where}: malformed path`);
+    } else if (paths.includes(path))
+      problems.push(`${where}: duplicate ${path}`);
+    else paths.push(path);
+  });
+  if (problems.length > 0) throw new Error(problems.join("\n"));
+  return paths;
+}
+
+/** `settings.json`: `{ deletion: "on" | "off", removalLimit: 20 }`, nothing else. */
+export function parseSettings(text: string): Settings {
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    throw new Error("settings.json: not valid JSON");
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("settings.json: expected an object");
+  }
+  const settings = value as Record<string, unknown>;
+  const problems: string[] = [];
+  for (const key of Object.keys(settings)) {
+    if (key !== "deletion" && key !== "removalLimit") {
+      problems.push(`unknown key "${key}"`);
+    }
+  }
+  if (settings.deletion !== "on" && settings.deletion !== "off") {
+    problems.push('deletion must be "on" or "off"');
+  }
+  if (settings.removalLimit !== REMOVAL_LIMIT) {
+    problems.push(`removalLimit must be ${REMOVAL_LIMIT} (spec §6)`);
+  }
+  if (problems.length > 0) {
+    throw new Error(`settings.json: ${problems.join("; ")}`);
+  }
+  return settings as unknown as Settings;
+}
+
+/** All three rules files; a path both protected and approved is an error. */
+export function parseRules(files: {
+  protectedText: string;
+  approvedText: string;
+  settingsText: string;
+}): Rules {
+  const rules: Rules = {
+    protected: parseRuleList(files.protectedText, "protected.txt"),
+    approved: parseRuleList(files.approvedText, "approved-removals.txt"),
+    settings: parseSettings(files.settingsText),
+  };
+  const both = rules.approved.filter((p) => rules.protected.includes(p));
+  if (both.length > 0) {
+    throw new Error(
+      `rules-conflict: protected and approved for removal: ${both.join(", ")}`,
+    );
+  }
+  return rules;
+}
+
+// --- Publish record ---------------------------------------------------------
+
+export type RecordProblem = "absent" | "unreadable" | "malformed-path";
+
+/**
+ * Reads the previous publish record and says why it cannot be used: absent
+ * (no file), unreadable (invalid JSON, unknown version, a field breaking its
+ * constraints) or malformed-path (a listed path breaks the path rule). An
+ * unreadable record counts as no matching record (AC-12).
+ */
+export function inspectRecord(text: string | null): {
+  record: PublishRecord | null;
+  problem: RecordProblem | null;
+} {
+  const none = (problem: RecordProblem) => ({ record: null, problem });
+  if (text === null) return none("absent");
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return none("unreadable");
+  }
+  const r = value as Partial<PublishRecord> | null;
+  if (typeof r !== "object" || r === null) return none("unreadable");
+  if (r.version !== 1) return none("unreadable");
+  if (typeof r.commit !== "string" || !/^[0-9a-f]{40}$/.test(r.commit)) {
+    return none("unreadable");
+  }
+  if (
+    typeof r.publishedAt !== "string" ||
+    !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z$/.test(r.publishedAt)
+  ) {
+    return none("unreadable");
+  }
+  if (!Array.isArray(r.files) || r.files.length === 0) {
+    return none("unreadable");
+  }
+  const seen = new Set<string>();
+  for (const f of r.files) {
+    if (typeof f !== "object" || f === null) return none("unreadable");
+    if (typeof f.path !== "string") return none("unreadable");
+    if (normalisePath(f.path) !== f.path) return none("malformed-path");
+    if (typeof f.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(f.sha256)) {
+      return none("unreadable");
+    }
+    if (seen.has(f.path)) return none("unreadable");
+    seen.add(f.path);
+  }
+  return {
+    record: {
+      version: 1,
+      commit: r.commit,
+      publishedAt: r.publishedAt,
+      files: r.files.map((f) => ({ path: f.path, sha256: f.sha256 })),
+    },
+    problem: null,
+  };
+}
+
+/** The previous publish record, or null when there is none or it is unusable. */
+export function parseRecord(text: string | null): PublishRecord | null {
+  return inspectRecord(text).record;
+}
+
+// --- Planning ---------------------------------------------------------------
+
+export type EntryKind =
+  | "uploaded"
+  | "removed"
+  | "unknown"
+  | "protected"
+  | "approved-pending"
+  | "owned-pending"
+  | "warning";
+
+/** One line of the maintainer-only publish report (data-model.md). */
+export interface ReportEntry {
+  kind: EntryKind;
+  path: string;
+  malformed?: boolean;
+  message?: string;
+}
+
+export type FailedCheck =
+  | "missing-front-page"
+  | "missing-logo"
+  | "no-previous-record"
+  | "record-without-front-page-or-logo"
+  | "removal-limit"
+  | "protected-clash"
+  | "layout-clash"
+  | "approved-in-build"
+  | "listing-failed"
+  | "upload-failed"
+  | "swap-failed"
+  | "malformed-path"
+  | "no-maintainer-key"
+  | "encryption-failed"
+  | "remote-tools-missing"
+  | "post-publish-check";
+
+export interface PlanInput {
+  /** Paths of the built files, relative to dist/. */
+  build: string[];
+  /** Raw names of the files in the target folder, as the server lists them. */
+  listing: string[];
+  /** The previous publish record, or null (none or unreadable). */
+  record: PublishRecord | null;
+  /** Why `record` is null, when known (see inspectRecord). */
+  recordProblem?: RecordProblem | null;
+  rules: Rules;
+}
+
+export type PlanResult =
+  | {
+      ok: true;
+      upload: string[];
+      remove: string[];
+      /** Owned files left on the server, kept in the new record. */
+      carry: RecordedFile[];
+      entries: ReportEntry[];
+    }
+  | {
+      ok: false;
+      failedCheck: FailedCheck;
+      detail: string;
+      entries: ReportEntry[];
+    };
+
+export type Ownership = "protected" | "owned" | "approved" | "unknown";
+
+/** Protected wins over owned, owned over approved; anything else is unknown. */
+export function classify(
+  path: string,
+  record: PublishRecord | null,
+  rules: Rules,
+): Ownership {
+  if (rules.protected.includes(path)) return "protected";
+  if (record?.files.some((f) => f.path === path)) return "owned";
+  if (rules.approved.includes(path)) return "approved";
+  return "unknown";
+}
+
+const byPath = (a: ReportEntry, b: ReportEntry) =>
+  a.path < b.path ? -1 : a.path > b.path ? 1 : 0;
+
+const REPLACED_UNKNOWN = "replaced a file the site never published";
+
+interface Sorted {
+  upload: string[];
+  remove: string[];
+  carry: RecordedFile[];
+  entries: ReportEntry[];
+  /** Normalised paths present in the target folder. */
+  present: Set<string>;
+}
+
+/** Sorts every listed file by ownership; removals only when deletion is on. */
+function sortListing(input: PlanInput, deletionOn: boolean): Sorted {
+  const { record, rules } = input;
+  const build = [...input.build].sort();
+  const inBuild = new Set(build);
+  const entries: ReportEntry[] = build.map((path) => ({
+    kind: "uploaded",
+    path,
+  }));
+  const remove: string[] = [];
+  const carry: RecordedFile[] = [];
+  const present = new Set<string>();
+
+  for (const raw of input.listing) {
+    const path = normalisePath(raw);
+    if (path === null) {
+      entries.push({ kind: "unknown", path: raw, malformed: true });
+      continue;
+    }
+    if (isOutsideListing(path)) continue;
+    present.add(path);
+    const ownership = classify(path, record, rules);
+    if (inBuild.has(path)) {
+      if (ownership === "unknown") {
+        entries.push({
+          kind: "warning",
+          path,
+          message: REPLACED_UNKNOWN,
+        });
+      }
+      continue;
+    }
+    if (ownership === "protected" || ownership === "unknown") {
+      entries.push({ kind: ownership, path });
+    } else if (deletionOn) {
+      remove.push(path);
+      entries.push({ kind: "removed", path });
+    } else {
+      entries.push({ kind: `${ownership}-pending`, path });
+      const owned = record?.files.find((f) => f.path === path);
+      if (ownership === "owned" && owned) carry.push(owned);
+    }
+  }
+  for (const path of rules.approved) {
+    if (!present.has(path)) {
+      entries.push({
+        kind: "warning",
+        path,
+        message: "approved for removal but no longer on the server",
+      });
+    }
+  }
+  carry.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return { upload: build, remove: remove.sort(), carry, entries, present };
+}
+
+/**
+ * A build path and a listed path where one is a strict parent folder of the
+ * other: the swap would write into a folder, or need a folder where a file is.
+ */
+function findLayoutClash(build: string[], listing: string[]): string | null {
+  const listed = listing
+    .map(normalisePath)
+    .filter((p): p is string => p !== null && !isOutsideListing(p));
+  for (const b of build) {
+    for (const l of listed) {
+      if (l.startsWith(`${b}/`) || b.startsWith(`${l}/`)) return `${b} / ${l}`;
+    }
+  }
+  return null;
+}
+
+/** The first guard that fails (AC-11b, AC-12), or null. */
+function firstFailedCheck(
+  input: PlanInput,
+  sorted: Sorted,
+): { failedCheck: FailedCheck; detail: string } | null {
+  const { build, record, rules } = input;
+  const malformed = build.find((p) => normalisePath(p) !== p);
+  if (malformed !== undefined) {
+    return { failedCheck: "malformed-path", detail: JSON.stringify(malformed) };
+  }
+  if (!build.includes(FRONT_PAGE)) {
+    return {
+      failedCheck: "missing-front-page",
+      detail: `build lacks ${FRONT_PAGE}`,
+    };
+  }
+  if (!build.includes(LOGO)) {
+    return { failedCheck: "missing-logo", detail: `build lacks ${LOGO}` };
+  }
+  const clashes = build.filter((p) => rules.protected.includes(p));
+  if (clashes.length > 0) {
+    return {
+      failedCheck: "protected-clash",
+      detail: `build file at a protected address: ${clashes.join(", ")}`,
+    };
+  }
+  const approvedInBuild = build.filter((p) => rules.approved.includes(p));
+  if (approvedInBuild.length > 0) {
+    return {
+      failedCheck: "approved-in-build",
+      detail: `approved for removal but also in the build: ${approvedInBuild.join(", ")}`,
+    };
+  }
+  const layout = findLayoutClash(build, input.listing);
+  if (layout !== null) {
+    return {
+      failedCheck: "layout-clash",
+      detail: `build path and server path overlap as folder and file: ${layout}`,
+    };
+  }
+  // A malformed record stops whatever the deletion setting: dropping it would
+  // also drop the owned leftovers it carries (data-model, carry invariant).
+  if (record === null && input.recordProblem === "malformed-path") {
+    return {
+      failedCheck: "malformed-path",
+      detail: "previous record lists a malformed path",
+    };
+  }
+  if (rules.settings.deletion === "off") return null;
+
+  if (record === null) {
+    return {
+      failedCheck: "no-previous-record",
+      detail: "target folder has no readable publish record",
+    };
+  }
+  for (const path of [FRONT_PAGE, LOGO]) {
+    if (!record.files.some((f) => f.path === path)) {
+      return {
+        failedCheck: "record-without-front-page-or-logo",
+        detail: `previous record does not list ${path}`,
+      };
+    }
+    if (!sorted.present.has(path)) {
+      return {
+        failedCheck: "record-without-front-page-or-logo",
+        detail: `target folder lacks ${path}, which the record lists`,
+      };
+    }
+  }
+  const limit = rules.settings.removalLimit;
+  if (sorted.remove.length > limit) {
+    const approved = rules.approved.filter((p) => sorted.present.has(p)).sort();
+    const exact =
+      approved.length === sorted.remove.length &&
+      approved.every((p, i) => p === sorted.remove[i]);
+    if (!exact) {
+      const plannedNotApproved = sorted.remove.filter(
+        (p) => !rules.approved.includes(p),
+      );
+      const approvedNotPlanned = rules.approved
+        .filter((p) => !sorted.remove.includes(p))
+        .sort();
+      return {
+        failedCheck: "removal-limit",
+        detail:
+          `${sorted.remove.length} removals exceed the routine limit of ${limit} and differ from the approved list; ` +
+          `planned, not approved: ${plannedNotApproved.join(", ") || "none"}; ` +
+          `approved, not planned: ${approvedNotPlanned.join(", ") || "none"}`,
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Plans one publish: upload the whole build; with deletion on, remove owned
+ * or approved files the build no longer has; never touch protected or
+ * unknown files; report every server file the build lacks. Stops before any
+ * change when a guard fails, still returning the listing for review.
+ */
+export function planPublish(input: PlanInput): PlanResult {
+  const deletionOn = input.rules.settings.deletion === "on";
+  const sorted = sortListing(input, deletionOn);
+  const failed = firstFailedCheck(input, sorted);
+  if (failed !== null) {
+    const listing = sortListing(input, false).entries.filter(
+      (e) => e.kind !== "uploaded" && e.message !== REPLACED_UNKNOWN,
+    );
+    return { ok: false, ...failed, entries: listing.sort(byPath) };
+  }
+  return {
+    ok: true,
+    upload: sorted.upload,
+    remove: sorted.remove,
+    carry: sorted.carry,
+    entries: sorted.entries.sort(byPath),
+  };
+}

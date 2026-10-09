@@ -1,0 +1,60 @@
+{
+  "slug": "_scaffold",
+  "smoke_test": "npm ci && npm run lint && npm test && npm run build all succeed, and dist/index.html exists. No migration tool (ADR 0002), so that part of the standard smoke test does not apply.",
+  "tasks": [
+    {
+      "id": "S1",
+      "title": "Remove the HugoBlox starter and create the Astro project skeleton",
+      "layer": "scaffold",
+      "deps": [],
+      "acs": [],
+      "dod": "HugoBlox files are gone (config/, content/, assets/scss/, static/, go.mod, go.sum, netlify.toml, theme.toml, preview.png, .github/FUNDING.yml, .github/workflows/import-publications.yml, starter README); logo.svg and icon.png moved to public/; package.json, package-lock.json, astro.config.mjs (site https://oden.abe.kth.se/, static output), tsconfig.json (astro strict), .nvmrc (Node LTS) exist; .gitignore covers node_modules/, dist/, .astro/; `npm run build` produces dist/index.html from a minimal src/pages/index.astro.",
+      "files_hint": ["package.json", "astro.config.mjs", "tsconfig.json", ".nvmrc", ".gitignore", "src/pages/index.astro", "public/"]
+    },
+    {
+      "id": "S2",
+      "title": "Base layout, header/footer and design tokens seeded from the existing identity",
+      "layer": "scaffold",
+      "deps": ["S1"],
+      "acs": [],
+      "dod": "src/styles/tokens.css holds colour (logo navy #004790, grey #666, blue/cyan scales from the old theme), type and spacing tokens; global.css imported once in src/layouts/Base.astro; Header.astro (logo + nav: Research, People, Join/Contact) and Footer.astro exist; index.astro uses Base.astro; build still succeeds. Restyling itself is feature work (roadmap step 1).",
+      "files_hint": ["src/styles/tokens.css", "src/styles/global.css", "src/layouts/Base.astro", "src/components/Header.astro", "src/components/Footer.astro"]
+    },
+    {
+      "id": "S3",
+      "title": "Content collections for themes, people and projects with cross-references",
+      "layer": "scaffold",
+      "deps": ["S1"],
+      "acs": [],
+      "dod": "src/content.config.ts defines themes, people and projects with Zod schemas; people and projects reference themes (and projects reference people) via reference(); collection folders exist under src/content/ with a README.md each describing the fields (no demo entries); `astro check` passes.",
+      "files_hint": ["src/content.config.ts", "src/content/themes/", "src/content/people/", "src/content/projects/"]
+    },
+    {
+      "id": "S4",
+      "title": "Test, lint and format harness with a build smoke test",
+      "layer": "scaffold",
+      "deps": ["S1"],
+      "acs": [],
+      "dod": "Vitest configured; tests/build.test.ts asserts the build produces dist/index.html; Prettier with prettier-plugin-astro configured; scripts: build, dev, preview, test (vitest run), lint (astro check && prettier --check .), format; the full smoke test passes locally.",
+      "files_hint": ["vitest.config.ts", "tests/build.test.ts", ".prettierrc", ".prettierignore", "package.json"]
+    },
+    {
+      "id": "S5",
+      "title": "CI and deploy workflow: check on PRs, build and deploy main to KTH",
+      "layer": "scaffold",
+      "deps": ["S4"],
+      "acs": [],
+      "dod": "One workflow: on pull_request runs npm ci, lint, test, build; on push to main additionally copies dist/ to the KTH server via the existing SSH secrets (SSH_HOST, SSH_USERNAME, SSH_PRIVATE_KEY, SSH_TARGET_DIR) so files land at the target root, not in a dist/ subfolder; Node version read from .nvmrc; Hugo steps removed; workflow YAML is valid.",
+      "files_hint": [".github/workflows/publish.yaml"]
+    },
+    {
+      "id": "S6",
+      "title": "CLAUDE.md and README from the chosen conventions",
+      "layer": "scaffold",
+      "deps": ["S2", "S3", "S4"],
+      "acs": [],
+      "dod": "CLAUDE.md states the conventions in docs/architecture-map.md (structure, file-name IDs, tokens-only styling, build-fails-on-bad-content, commands); README.md explains how to add a person/theme/project and how deploy works; both match the actual files.",
+      "files_hint": ["CLAUDE.md", "README.md"]
+    }
+  ]
+}

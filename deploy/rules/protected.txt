@@ -1,0 +1,3 @@
+# Protected files: server-folder files the site does not build but that must
+# survive every publish (e.g. files KTH IT relies on). One path per line,
+# relative to the target folder; no wildcards. Maintainers only (CODEOWNERS).

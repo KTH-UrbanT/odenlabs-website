@@ -1,0 +1,769 @@
+{
+  "slug": "clean-starter",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Add the ordered planned-sections list and the pure offered-sections helpers",
+      "layer": "domain",
+      "deps": [],
+      "acs": [
+        "AC-03",
+        "AC-04"
+      ],
+      "dod": "`tests/navigation.test.ts` passes, covering all-present, none-present and mistyped href (sad §10 QG-2)",
+      "files_hint": [
+        "src/data/sections.ts",
+        "src/lib/navigation.ts",
+        "tests/navigation.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t01-planned-sections.md"
+    },
+    {
+      "id": "T2",
+      "title": "Add the WCAG contrast check over the declared text/background pairs",
+      "layer": "domain",
+      "deps": [],
+      "acs": [
+        "AC-06"
+      ],
+      "dod": "`tests/contrast.test.ts` passes on the unit cases and fails on a deliberately broken fixture pair, naming it",
+      "files_hint": [
+        "src/lib/contrast.ts",
+        "src/styles/contrast-pairs.ts",
+        "tests/contrast.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t02-contrast-check.md"
+    },
+    {
+      "id": "T3",
+      "title": "Render only offered sections in the header and assert every header link resolves",
+      "layer": "ui",
+      "deps": [
+        "T1"
+      ],
+      "acs": [
+        "AC-03"
+      ],
+      "dod": "`dist/index.html` header contains no link to `/research/`, `/people/` or `/join/` while those pages do not exist",
+      "files_hint": [
+        "src/components/Header.astro",
+        "tests/build.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t03-header-offered-sections.md"
+    },
+    {
+      "id": "T4",
+      "title": "Add the not-found page with navigation, a link home and noindex",
+      "layer": "ui",
+      "deps": [],
+      "acs": [
+        "AC-02"
+      ],
+      "dod": "`dist/404.html` exists with `noindex`, the header and a link to `/`, asserted in `tests/build.test.ts`",
+      "files_hint": [
+        "src/pages/404.astro",
+        "src/layouts/Base.astro",
+        "tests/build.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t04-not-found-page.md"
+    },
+    {
+      "id": "T5",
+      "title": "Write the minimal who-we-are front page from the maintainer's copy",
+      "layer": "ui",
+      "deps": [],
+      "acs": [
+        "AC-15"
+      ],
+      "dod": "the front-page assertion in `tests/build.test.ts` passes, and the paragraph is the maintainer's copy word for word",
+      "files_hint": [
+        "src/pages/index.astro",
+        "tests/build.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t05-front-page.md"
+    },
+    {
+      "id": "T6",
+      "title": "Derive the palette and type from the logo, self-host the fonts, and get the before/after sign-off",
+      "layer": "ui",
+      "deps": [
+        "T2",
+        "T4",
+        "T5"
+      ],
+      "acs": [
+        "AC-05",
+        "AC-06"
+      ],
+      "dod": "`tests/contrast.test.ts` passes on the logo-derived tokens, fonts are self-hosted, `public/logo.svg` is unchanged, and the maintainer's before/after sign-off is recorded in the PR",
+      "files_hint": [
+        "src/styles/tokens.css",
+        "src/styles/global.css",
+        "src/styles/contrast-pairs.ts",
+        "public/fonts/"
+      ],
+      "file": "docs/features/clean-starter/tasks/t06-identity-palette-and-fonts.md"
+    },
+    {
+      "id": "T7",
+      "title": "Add the per-page font budget build guard (off-site half split to T17)",
+      "layer": "tests",
+      "deps": [
+        "T6"
+      ],
+      "acs": [
+        "AC-05"
+      ],
+      "dod": "the font-budget guard passes on the current build and fails on its planted fixture",
+      "files_hint": [
+        "tests/build.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t07-build-guards.md"
+    },
+    {
+      "id": "T8",
+      "title": "Define the publish model: path normaliser, rules/settings/record parsers and the initial rules files",
+      "layer": "domain",
+      "deps": [],
+      "acs": [
+        "AC-07b",
+        "AC-12"
+      ],
+      "dod": "`tests/plan.test.ts` parser and normaliser cases pass; the real rules files parse",
+      "files_hint": [
+        "deploy/plan.ts",
+        "deploy/rules/",
+        "tests/plan.test.ts",
+        "tests/fixtures/publish.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t08-publish-model-and-rules.md"
+    },
+    {
+      "id": "T9",
+      "title": "Implement planPublish() classification and the upload / remove / list plan",
+      "layer": "domain",
+      "deps": [
+        "T8"
+      ],
+      "acs": [
+        "AC-01",
+        "AC-07",
+        "AC-07b",
+        "AC-10",
+        "AC-11",
+        "AC-13"
+      ],
+      "dod": "`tests/plan.test.ts` covers every row of the ownership table for deletion off and on",
+      "files_hint": [
+        "deploy/plan.ts",
+        "tests/plan.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t09-plan-classification.md"
+    },
+    {
+      "id": "T10",
+      "title": "Add the planner stop-guards: protected clash, missing front page/logo, record, removal limit, malformed path",
+      "layer": "domain",
+      "deps": [
+        "T9"
+      ],
+      "acs": [
+        "AC-11b",
+        "AC-12"
+      ],
+      "dod": "`tests/plan.test.ts` has a failing-input case for every guard (incl. 20 vs 21 removals and an off-by-one approved list), each stopping before any upload or removal and naming its check",
+      "files_hint": [
+        "deploy/plan.ts",
+        "tests/plan.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t10-plan-stop-guards.md"
+    },
+    {
+      "id": "T11",
+      "title": "Write the remote swap script and its integration test against a temp folder",
+      "layer": "infra",
+      "deps": [
+        "T8"
+      ],
+      "acs": [
+        "AC-10",
+        "AC-11"
+      ],
+      "dod": "`tests/swap.test.ts` passes on the runner and locally (macOS and Linux `sh`)",
+      "files_hint": [
+        "deploy/remote/swap.sh",
+        "tests/swap.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t11-remote-swap-script.md"
+    },
+    {
+      "id": "T12",
+      "title": "Build the publish report: public counts summary and the GPG-encrypted full report",
+      "layer": "infra",
+      "deps": [
+        "T8"
+      ],
+      "acs": [
+        "AC-07",
+        "AC-09"
+      ],
+      "dod": "`tests/report.test.ts` passes in CI, including the round-trip and the \"summary leaks no path\" case",
+      "files_hint": [
+        "deploy/report.ts",
+        "deploy/maintainers/",
+        "tests/report.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t12-publish-report.md"
+    },
+    {
+      "id": "T13",
+      "title": "Write the publish shell: list, plan, report, stage, swap, verify over SSH",
+      "layer": "app",
+      "deps": [
+        "T1",
+        "T10",
+        "T11",
+        "T12"
+      ],
+      "acs": [
+        "AC-01",
+        "AC-04",
+        "AC-10",
+        "AC-13"
+      ],
+      "dod": "`tests/publish.test.ts` passes end to end through the local executor",
+      "files_hint": [
+        "deploy/publish.ts",
+        "deploy/ssh.ts",
+        "tests/publish.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t13-publish-shell.md"
+    },
+    {
+      "id": "T14",
+      "title": "Wire the deploy job to the publish worker in the main-only environment and add CODEOWNERS",
+      "layer": "wiring",
+      "deps": [
+        "T13"
+      ],
+      "acs": [
+        "AC-08",
+        "AC-09"
+      ],
+      "dod": "the deploy job runs `node deploy/publish.ts` in environment `kth-server` with no `scp-action` left, PR runs never deploy, and CODEOWNERS covers `/deploy/` and `/.github/`",
+      "files_hint": [
+        ".github/workflows/publish.yaml",
+        ".github/CODEOWNERS"
+      ],
+      "file": "docs/features/clean-starter/tasks/t14-workflow-and-codeowners.md"
+    },
+    {
+      "id": "T15",
+      "title": "Document the publishing rules and rollout, and confirm the repository is free of starter files",
+      "layer": "docs",
+      "deps": [
+        "T14"
+      ],
+      "acs": [
+        "AC-08",
+        "AC-14"
+      ],
+      "dod": "`deploy/README.md` covers the four rollout steps and the deletion switch, and the sweep finds no starter file, template notice or licence file outside `docs/`",
+      "files_hint": [
+        "deploy/README.md",
+        "README.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t15-rollout-runbook-and-repo-sweep.md"
+    },
+    {
+      "id": "T16",
+      "title": "Stop a publish when the server's folder layout conflicts with the build",
+      "layer": "domain",
+      "deps": [
+        "T10",
+        "T11"
+      ],
+      "acs": [
+        "AC-11",
+        "AC-13",
+        "AC-13b"
+      ],
+      "dod": "planner stops with a named check on any parent/child clash; swap.sh refuses a folder target or a symlinked parent; new plan.test and swap.test cases fail before the fix and pass after",
+      "files_hint": [
+        "deploy/plan.ts",
+        "deploy/remote/swap.sh",
+        "tests/plan.test.ts",
+        "tests/swap.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t16-path-layout-guards.md",
+      "source": "review-2026-10-04 F-01"
+    },
+    {
+      "id": "T17",
+      "title": "Fail the build test when any built page references another host",
+      "layer": "tests",
+      "deps": [
+        "T4"
+      ],
+      "acs": [],
+      "dod": "guard passes on the current build and fails on a planted off-site reference",
+      "files_hint": [
+        "tests/build.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t17-off-site-request-guard.md",
+      "source": "review-2026-10-04 F-02 (T7 split)"
+    },
+    {
+      "id": "T18",
+      "title": "Seal the report and write the summary on every failure, and report record and listing problems",
+      "layer": "app",
+      "deps": [
+        "T16"
+      ],
+      "acs": [
+        "AC-07",
+        "AC-09",
+        "AC-12"
+      ],
+      "dod": "every failure after sealing produces a re-sealed report with a named outcome and a public summary; unreadable/malformed record and unreadable folders are reported; per-tool probe; tests for each",
+      "files_hint": [
+        "deploy/publish.ts",
+        "deploy/plan.ts",
+        "deploy/report.ts",
+        "tests/publish.test.ts",
+        "tests/plan.test.ts",
+        "tests/report.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t18-worker-failure-paths.md",
+      "source": "review-2026-10-04 F-03"
+    },
+    {
+      "id": "T19",
+      "title": "Put all code that runs with the server key under Code Owner review and narrow the job token",
+      "layer": "wiring",
+      "deps": [
+        "T14"
+      ],
+      "acs": [
+        "AC-08"
+      ],
+      "dod": "CODEOWNERS covers every file the deploy step imports; workflow has read-only permissions and no persisted credentials in the deploy job; workflow.test asserts both",
+      "files_hint": [
+        ".github/CODEOWNERS",
+        ".github/workflows/publish.yaml",
+        "deploy/README.md",
+        "tests/workflow.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t19-secrets-boundary.md",
+      "source": "review-2026-10-04 F-04"
+    },
+    {
+      "id": "T20",
+      "title": "Move the header's page rule into the navigation helper and close the readability-check gaps",
+      "layer": "ui",
+      "deps": [
+        "T3",
+        "T2"
+      ],
+      "acs": [
+        "AC-03",
+        "AC-06"
+      ],
+      "dod": "page→built-file rule lives in navigation.ts with unit tests and an AC-03 build-level test; heading pair declared; exact threshold tests; parse errors name pair and token; duplicate tokens fail",
+      "files_hint": [
+        "src/lib/navigation.ts",
+        "src/components/Header.astro",
+        "src/styles/contrast-pairs.ts",
+        "src/lib/contrast.ts",
+        "tests/navigation.test.ts",
+        "tests/contrast.test.ts",
+        "tests/build.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t20-site-checks.md",
+      "source": "review-2026-10-04 F-05"
+    },
+    {
+      "id": "T21",
+      "title": "Harden rule parsing, the swap timer, approved-in-build and the removal-limit report",
+      "layer": "domain",
+      "deps": [
+        "T18"
+      ],
+      "acs": [
+        "AC-11",
+        "AC-12"
+      ],
+      "dod": "each item has a test that failed before and passes after",
+      "files_hint": [
+        "deploy/plan.ts",
+        "deploy/remote/swap.sh",
+        "deploy/publish.ts",
+        "tests/plan.test.ts",
+        "tests/swap.test.ts",
+        "tests/publish.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t21-worker-hardening.md",
+      "source": "review-2026-10-04 F-06 (code items)"
+    },
+    {
+      "id": "T22",
+      "title": "Carry owned files a publish did not remove into the new record",
+      "layer": "app",
+      "deps": [
+        "T21"
+      ],
+      "acs": [
+        "AC-07b",
+        "AC-10"
+      ],
+      "dod": "with deletion off, a page removed from the repo stays in the record and is removed on the first publish with deletion on; data-model updated",
+      "files_hint": [
+        "deploy/plan.ts",
+        "deploy/publish.ts",
+        "tests/plan.test.ts",
+        "tests/publish.test.ts",
+        "docs/features/clean-starter/data-model.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t22-carry-leftovers-in-record.md",
+      "source": "review-2026-10-04 F-07"
+    },
+    {
+      "id": "T23",
+      "title": "Bring the docs in line with the code after review",
+      "layer": "docs",
+      "deps": [
+        "T16",
+        "T17",
+        "T18",
+        "T19",
+        "T20",
+        "T21",
+        "T22"
+      ],
+      "acs": [
+        "AC-14"
+      ],
+      "dod": "lint clean; every item in the checklist done",
+      "files_hint": [
+        "README.md",
+        "docs/features/clean-starter/sad.md",
+        "docs/features/clean-starter/ux-flows.md",
+        "docs/features/clean-starter/data-model.md",
+        "docs/features/clean-starter/adr/0001-build-a-static-web-frontend-and-a-separate-publish-worker.md",
+        "docs/features/clean-starter/tasks/"
+      ],
+      "file": "docs/features/clean-starter/tasks/t23-docs-sync.md",
+      "source": "review-2026-10-04 F-06 (docs items)"
+    },
+    {
+      "id": "T24",
+      "title": "Catch entity-encoded url() in style attributes",
+      "layer": "tests",
+      "deps": [
+        "T17"
+      ],
+      "acs": [],
+      "dod": "a unit case with Astro's exact `url(&quot;https://…&quot;)` output is reported; current build still passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t24-offsite-entity-decoding.md",
+      "source": "review-2026-10-04-2 R-01"
+    },
+    {
+      "id": "T25",
+      "title": "Exercise the header's offered sections against a real section page",
+      "layer": "tests",
+      "deps": [
+        "T20"
+      ],
+      "acs": [
+        "AC-03"
+      ],
+      "dod": "the AC-03 build test asserts a non-empty ordered {label, href} list and fails if the header renders no section links",
+      "files_hint": [
+        "tests/build.test.ts",
+        "tests/fixtures/"
+      ],
+      "file": "docs/features/clean-starter/tasks/t25-ac03-build-fixture.md",
+      "source": "review-2026-10-04-2 R-02"
+    },
+    {
+      "id": "T26",
+      "title": "Docs sync: AC-13b, ownership table, CODEOWNERS rule, failure outcomes",
+      "layer": "docs",
+      "deps": [
+        "T24",
+        "T25"
+      ],
+      "acs": [
+        "AC-08",
+        "AC-09",
+        "AC-12",
+        "AC-13b"
+      ],
+      "dod": "every item in the checklist done; AC-13b traced spec → sad → data-model → test",
+      "files_hint": [
+        "docs/features/clean-starter/data-model.md",
+        "docs/features/clean-starter/sad.md",
+        "docs/features/clean-starter/adr/0005-gate-publishing-rules-by-review-and-main-only-server-secrets.md",
+        "tests/plan.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t26-docs-sync-2.md",
+      "source": "review-2026-10-04-2 R-03, R-04"
+    },
+    {
+      "id": "T27",
+      "title": "Off-site guard: decode every attribute value and the remaining entity forms",
+      "layer": "tests",
+      "deps": [
+        "T24"
+      ],
+      "acs": [],
+      "dod": "Astro's encoded mask= url(), an SVG <style>, entity forms without ';', &colon;/&sol;, unquoted, single-quoted and hex cases are all reported; removing a decode branch fails a test; the current build still passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t27-offsite-all-attributes.md",
+      "source": "review-2026-10-04-3 F-2, R3-01, R3-02, R3-04"
+    },
+    {
+      "id": "T28",
+      "title": "Docs sync: AC-13b in ux-flows, AC-13b scope, task traceability",
+      "layer": "docs",
+      "deps": [],
+      "acs": [
+        "AC-13",
+        "AC-13b"
+      ],
+      "dod": "AC-13b traced spec → ux-flows → sad → data-model → T16 → test, with the same scope everywhere",
+      "files_hint": [
+        "docs/features/clean-starter/ux-flows.md",
+        "docs/features/clean-starter/spec.md",
+        "docs/features/clean-starter/data-model.md",
+        "docs/features/clean-starter/tasks.json",
+        "docs/features/clean-starter/tasks/t16-path-layout-guards.md",
+        "docs/features/clean-starter/tasks/t24-offsite-entity-decoding.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t28-docs-sync-3.md",
+      "source": "review-2026-10-04-3 F-1, F-3, F-4"
+    },
+    {
+      "id": "T29",
+      "title": "Off-site guard: quote-aware tag scan, legacy entities, exact-case names, linear url() scan",
+      "layer": "tests",
+      "deps": [
+        "T27"
+      ],
+      "acs": [],
+      "dod": "Raw '<' or '</svg>' in an attribute and '/' separators no longer hide an encoded url(); &quot/&amp/&lt/&gt without ';' are decoded per the browser attribute rule; entity names match exact case; url() scan is linear on input with no ')'; every mutant listed in the review fails a test; the current build still passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t29-offsite-tokenizer.md",
+      "source": "review-2026-10-04-4 R4-01, R4-02, R4-03, R4-04, R4-07"
+    },
+    {
+      "id": "T30",
+      "title": "US-06 check order in ux-flows, AC-13b approved case, T16 trace line",
+      "layer": "docs",
+      "deps": [],
+      "acs": [
+        "AC-11b",
+        "AC-12",
+        "AC-13b"
+      ],
+      "dod": "ux-flows US-06 check order matches deploy/plan.ts including approved-in-build; AC-13b layout-clash test covers protected, unknown, owned and approved; T16 body lists AC-13b",
+      "files_hint": [
+        "docs/features/clean-starter/ux-flows.md",
+        "tests/plan.test.ts",
+        "docs/features/clean-starter/tasks/t16-path-layout-guards.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t30-docs-sync-4.md",
+      "source": "review-2026-10-04-4 R4-05, R4-06"
+    },
+    {
+      "id": "T31",
+      "title": "Off-site guard: additive decoding, one attribute reader, browser-accurate regions",
+      "layer": "tests",
+      "deps": [
+        "T29"
+      ],
+      "acs": [],
+      "dod": "url()/@import scans read source plus decoded text, so minified CSS range queries no longer hide URLs; src/srcset/poster/link/image/use checks read the tag reader's attributes, so a raw '>' in a quoted value or a '/' separator no longer hides an href, and those scans are linear; noscript, comment, bogus-comment, CDATA, end-tag and unclosed SVG style regions end where the browser ends them; escaped '(' in unquoted url() is read; every miss-causing mutant from the review fails a test; the current build still passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t31-offsite-additive.md",
+      "source": "review-2026-10-05-5 F5-01, F5-02, F5-03, F5-04, F5-05"
+    },
+    {
+      "id": "T32",
+      "title": "US-06 malformed-path in ux-flows, sad Flow 5 deletion-off stops",
+      "layer": "docs",
+      "deps": [],
+      "acs": [
+        "AC-12"
+      ],
+      "dod": "ux-flows US-06 names malformed-path for build paths and the record; sad Flow 5 deletion-off stop branch names approved-in-build and malformed-path",
+      "files_hint": [
+        "docs/features/clean-starter/ux-flows.md",
+        "docs/features/clean-starter/sad.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t32-docs-sync-5.md",
+      "source": "review-2026-10-05-5 F5-06"
+    },
+    {
+      "id": "T33",
+      "title": "Off-site guard: reader desync (self-closing svg, foreign content, HTML whitespace)",
+      "layer": "tests",
+      "deps": [
+        "T31"
+      ],
+      "acs": [],
+      "dod": "a self-closing svg no longer hides later markup; the reader runs under foreign-content and HTML-only readings and noscript as markup and as raw text, and the results are unioned; upper-case </SVG> ends the fallback; only HTML whitespace separates attributes; every repro reports its URL; the current build passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t33-offsite-reader-desync.md",
+      "source": "review-2026-10-07 R6-02"
+    },
+    {
+      "id": "T34",
+      "title": "Off-site guard: region-free tag pass, split svg/math depth, pin T33 fixes with tests, linear SVG style run",
+      "layer": "tests",
+      "deps": [
+        "T33"
+      ],
+      "acs": [],
+      "dod": "a region-free tag pass is unioned with the four readings; svg and math depth are counted separately; the tag head has no length limit; every repro in the task reports its URL; one test row per surviving T33 mutant and none survives; SVG style end search is linear (1 MB adversarial inputs under 1 s); the current build passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t34-offsite-region-free-pass.md",
+      "source": "review-2026-10-08 F7-01, F7-02, F7-03"
+    },
+    {
+      "id": "T35",
+      "title": "T33 bookkeeping and ship drafts",
+      "layer": "docs",
+      "deps": [
+        "T34"
+      ],
+      "acs": [],
+      "dod": "tracker total, T33 checkboxes, spec updated_at, changelog and pr-body agree with spec 8, ADR-0003 and the code at HEAD",
+      "files_hint": [
+        "docs/features/clean-starter/tasks/tracker.md",
+        "docs/features/clean-starter/changelog.md",
+        "docs/features/clean-starter/pr-body.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t35-docs-sync-6.md",
+      "source": "review-2026-10-08 F7-04"
+    },
+    {
+      "id": "T36",
+      "title": "Off-site guard: linear flat pass, pre-T31 sixth member, flat-pass accuracy, mutant rows",
+      "layer": "tests",
+      "deps": [
+        "T34"
+      ],
+      "acs": [],
+      "dod": "the flat tag name stops at '<' and 1 MB '<a' inputs stay under 1 s; the pre-T31 global attribute scans are unioned as a sixth member and every repro reports its URL; the flat pass counts svg and math apart, takes self-closing from readAttributes and ends its style run at </style or </svg; the trade-off wording is widened; one test row per surviving mutant and none survives; the current build passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t36-offsite-flat-pass-fixes.md",
+      "source": "review-2026-10-08-2 G8-01, G8-02, G8-03, G8-04"
+    },
+    {
+      "id": "T37",
+      "title": "T35 status, tracker total, R6-02 wording after T36",
+      "layer": "docs",
+      "deps": [
+        "T36"
+      ],
+      "acs": [],
+      "dod": "T35 done and ticked, tracker total and rows, spec updated_at and R6-02, pr-body and changelog agree with spec 8 and the code at HEAD",
+      "files_hint": [
+        "docs/features/clean-starter/tasks/tracker.md",
+        "docs/features/clean-starter/spec.md",
+        "docs/features/clean-starter/pr-body.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t37-docs-sync-7.md",
+      "source": "review-2026-10-08-2 G8-04"
+    },
+    {
+      "id": "T38",
+      "title": "Off-site guard: legacy scan after bare attributes, mutant rows, module header, stable time budget",
+      "layer": "tests",
+      "deps": [
+        "T36"
+      ],
+      "acs": [],
+      "dod": "legacyUrls also reads src/poster/srcset after a bare or unquoted attribute and every repro reports its URL; its comment states what stays uncovered; one test row per surviving mutant and none survives; the module header lists the trade-offs; every linear-time test uses a 4 s budget and npm test passes five times in a row; the current build passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t38-offsite-legacy-scan-fixes.md",
+      "source": "review-2026-10-09 H9-01, H9-02, H9-03, H9-04"
+    },
+    {
+      "id": "T39",
+      "title": "Bookkeeping after T38",
+      "layer": "docs",
+      "deps": [
+        "T38"
+      ],
+      "acs": [],
+      "dod": "tracker, spec 8 R6-02, pr-body and changelog agree with the code at HEAD",
+      "files_hint": [
+        "docs/features/clean-starter/tasks/tracker.md",
+        "docs/features/clean-starter/spec.md",
+        "docs/features/clean-starter/pr-body.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t39-docs-sync-8.md",
+      "source": "review-2026-10-09 H9-01, H9-04"
+    },
+    {
+      "id": "T40",
+      "title": "Off-site guard: one whitespace rule in the legacy scan, no swallowed values, true comments, mutant rows",
+      "layer": "tests",
+      "deps": [
+        "T38"
+      ],
+      "acs": [],
+      "dod": "legacy matches start at HTML whitespace and walk back over the same class, so NBSP, \\v and U+3000 runs are linear and an NBSP before src still reports; a rejected candidate no longer swallows a later src; the header, the legacyUrls comment and spec 8 R6-02 state the real residuals and false positives; one test row per surviving mutant and none that hides a request survives; the current build passes",
+      "files_hint": [
+        "src/lib/offsite-requests.ts",
+        "tests/offsite-requests.test.ts"
+      ],
+      "file": "docs/features/clean-starter/tasks/t40-offsite-legacy-whitespace.md",
+      "source": "review-2026-10-09-2 J10-01, J10-02, J10-03, J10-04"
+    },
+    {
+      "id": "T41",
+      "title": "Bookkeeping after T40",
+      "layer": "docs",
+      "deps": [
+        "T40"
+      ],
+      "acs": [],
+      "dod": "tracker, spec 8 R6-02, pr-body and changelog agree with the code at HEAD",
+      "files_hint": [
+        "docs/features/clean-starter/tasks/tracker.md",
+        "docs/features/clean-starter/spec.md",
+        "docs/features/clean-starter/pr-body.md"
+      ],
+      "file": "docs/features/clean-starter/tasks/t41-docs-sync-9.md",
+      "source": "review-2026-10-09-2 J10-03"
+    }
+  ]
+}
