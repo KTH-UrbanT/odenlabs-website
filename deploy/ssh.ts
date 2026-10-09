@@ -26,7 +26,14 @@ export function shq(value: string): string {
 const MAX_OUTPUT = 256 * 1024 * 1024;
 
 function result(r: ReturnType<typeof spawnSync>): RunResult {
-  if (r.error) throw r.error;
+  // A command that fails without reading its input closes the pipe early:
+  // report its own exit status and stderr. With exit 0 the input may have
+  // been cut short, so that stays an error.
+  const closedEarly =
+    (r.error as NodeJS.ErrnoException | undefined)?.code === "EPIPE" &&
+    r.status !== null &&
+    r.status !== 0;
+  if (r.error && !closedEarly) throw r.error;
   return {
     status: r.status ?? 1,
     stdout: r.stdout as Buffer,
