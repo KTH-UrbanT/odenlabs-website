@@ -44,7 +44,7 @@
 | T37 | T35 status, tracker total, R6-02 wording (review G8-04)                                       | docs   | pasichnyi | S        | T36                 | done    |
 | T38 | Off-site guard: legacy scan after bare attributes, mutant rows, header, time budget (H9-01–H9-04) | tests  | pasichnyi | M        | T36                 | done    |
 | T39 | Bookkeeping after T38 (review H9-01, H9-04)                                                   | docs   | pasichnyi | S        | T38                 | done    |
-| T40 | Off-site guard: legacy scan whitespace, wording, mutant rows (review J10-01–J10-04)           | tests  | pasichnyi | M        | T38                 | todo    |
+| T40 | Off-site guard: legacy scan whitespace, wording, mutant rows (review J10-01–J10-04)           | tests  | pasichnyi | M        | T38                 | done    |
 | T41 | Bookkeeping after T40 (review J10-03)                                                         | docs   | pasichnyi | S        | T40                 | todo    |
 
 **Total:** 39 tasks, ~18.4 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).

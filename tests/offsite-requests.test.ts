@@ -918,8 +918,8 @@ describe("findOffSiteRequests", () => {
         `<svg><style><img alt="a > b" data-x src="${T}"></style></svg>`,
       ],
       [
-        "a bare controls and poster",
-        `<svg><style><video title="a > b" controls poster="${T}"></video></style></svg>`,
+        "a bare controls and poster after a breakout script",
+        `<svg><title>${ODD}<video title="a > b" controls poster="${T}"></video></title></svg>`,
       ],
     ])("the legacy scan reads a URL after %s", (_label, html) => {
       expect(legacyUrls(html)).toContain(T);
@@ -974,6 +974,78 @@ describe("findOffSiteRequests", () => {
         "&lt;img src=".repeat(90000),
         "a".repeat(1_000_000) + " src=x",
         `${" ".repeat(500000)}src=x${" ".repeat(500000)}`,
+      ]) {
+        const started = performance.now();
+        findOffSiteRequests(input, own);
+        expect(performance.now() - started).toBeLessThan(LINEAR_BUDGET_MS);
+      }
+    });
+  });
+
+  // T40 (review 2026-10-09, pass 10, J10-01 to J10-04).
+  describe("legacy scan whitespace, values and mutant rows (T40)", () => {
+    const T = "https://t.example.com/p.png";
+    const ODD = `<script>const t = '<span title="';</script>`;
+
+    it.each([
+      [
+        "an NBSP after a closing quote",
+        `<svg><style><img alt="a > b"\u00a0 src="${T}"></style></svg>`,
+      ],
+      [
+        "a stray src=' inside a value of the other quote type",
+        `<svg><style><img alt='a > src="b' src="${T}"></style></svg>`,
+      ],
+      [
+        "an apostrophe and a stray src='x' in a value",
+        `<svg><style><img alt="a > b it's src='x" src="${T}"></style></svg><p>it's</p>`,
+      ],
+      [
+        "a '/'-bearing unquoted value",
+        `<svg><style><img alt="a > b" data-path=/a/b src="${T}"></style></svg>`,
+      ],
+      [
+        "a bare attribute on a new line",
+        `<svg><style><img alt="a > b"\nhidden src="${T}"></style></svg>`,
+      ],
+      [
+        "a long bare attribute name",
+        `<svg><style><img alt="a > b" data-decorative-image src="${T}"></style></svg>`,
+      ],
+      [
+        "upper-case names",
+        `<svg><style><IMG ALT="a > b" SRC="${T}"></style></svg>`,
+      ],
+      [
+        "an upper-case <LINK> after a breakout script",
+        `<svg><title>${ODD}<LINK alt="a<b" REL="stylesheet" HREF="${T}"></title></svg>`,
+      ],
+      [
+        "spaces around '='",
+        `<svg><style><img alt="a > b" src = "${T}"></style></svg>`,
+      ],
+    ])("the legacy scan reads a URL after %s", (_label, html) => {
+      expect(legacyUrls(html)).toContain(T);
+    });
+
+    it("the legacy scan does not start a match at NBSP or \\v", () => {
+      for (const html of [
+        `<p>a\u00a0src="${T}"</p>`,
+        `<p>a\vsrc="${T}"</p>`,
+        `<p>a\u3000src="${T}"</p>`,
+      ])
+        expect(legacyUrls(html)).toEqual([]);
+    });
+
+    it("stays linear on src after non-HTML whitespace", () => {
+      for (const input of [
+        "\u00a0src=x".repeat(170000),
+        "\vsrc=x".repeat(170000),
+        "\u3000src=x".repeat(130000),
+        "\u00a0 src=x".repeat(130000),
+        "word src=x ".repeat(90000),
+        ` src='x`.repeat(170000),
+        ` src="x src='y`.repeat(80000),
       ]) {
         const started = performance.now();
         findOffSiteRequests(input, own);
