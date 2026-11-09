@@ -51,9 +51,12 @@ jobs:
   deploy:
     needs: check
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    # The SSH secrets live in this environment, which only main may use
-    # (ADR-0005), so no pull-request run can reach the server.
+    # The runner is the server (ADR-0006): the job writes the site folder
+    # directly, so there is no key to leak. Only this job may use the runner;
+    # the runner group is limited to this workflow file on main. Checks run on
+    # GitHub-hosted runners, so no pull request ever reaches the server.
+    runs-on: [self-hosted, oden-deploy]
+    timeout-minutes: 15
     environment: kth-server
     concurrency:
       group: deploy-kth
@@ -69,6 +72,11 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      # The runner keeps its workspace between runs: start from nothing so
+      # a file from an earlier run can never ride along in the upload.
+      - name: Start from an empty build folder
+        run: rm -rf dist publish-report.gpg
+
       - name: Download site
         uses: actions/download-artifact@v4
         with:
@@ -81,10 +89,9 @@ jobs:
       - name: Publish to the KTH server
         run: node deploy/publish.ts
         env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_TARGET_DIR: ${{ secrets.SSH_TARGET_DIR }}
+          PUBLISH_MODE: local
+          # The folder nginx serves on the server (compose mount ./public).
+          TARGET_DIR: /srv/odenlabs/odenlabs-website/public
           # Keep in step with `site` in astro.config.mjs.
           SITE_URL: https://oden.abe.kth.se/
           REPORT_FILE: publish-report.gpg

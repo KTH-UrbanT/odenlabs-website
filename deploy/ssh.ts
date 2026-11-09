@@ -41,13 +41,17 @@ function result(r: ReturnType<typeof spawnSync>): RunResult {
   };
 }
 
-/** Runs commands with the local `sh`: the test double for the server. */
-export function localExecutor(): Executor {
+/**
+ * Runs commands with the local `sh`: the test double for the server, and the
+ * production executor when the runner is the server (ADR-0006).
+ */
+export function localExecutor(): Executor & { close(): void } {
   return {
     run: (command, input) =>
       result(
         spawnSync("sh", ["-c", command], { input, maxBuffer: MAX_OUTPUT }),
       ),
+    close: () => {},
   };
 }
 

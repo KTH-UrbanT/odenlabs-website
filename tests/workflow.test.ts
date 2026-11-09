@@ -1,12 +1,17 @@
-// Guards the publishing controls in the workflow and CODEOWNERS (ADR-0005):
-// only main publishes, through the guarded worker, with secrets from the
-// main-only kth-server environment, and maintainers own the rules.
+// Guards the publishing controls in the workflow and CODEOWNERS (ADR-0005,
+// ADR-0006): only main publishes, through the guarded worker, on the
+// self-hosted runner that is the server, and maintainers own the rules.
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const workflow = readFileSync(".github/workflows/publish.yaml", "utf8");
 const deployJob = workflow.slice(workflow.indexOf("\n  deploy:"));
+
+const checkJob = workflow.slice(
+  workflow.indexOf("\n  check:"),
+  workflow.indexOf("\n  deploy:"),
+);
 
 const checkoutOf = (job: string) => job.slice(job.indexOf("actions/checkout"));
 
@@ -34,6 +39,29 @@ describe("publish workflow", () => {
     expect(deployJob).toMatch(/needs: check/);
   });
 
+  it("uses the self-hosted runner for the deploy job only", () => {
+    expect(deployJob).toMatch(/runs-on: \[self-hosted, oden-deploy\]/);
+    expect(checkJob).toMatch(/runs-on: ubuntu-latest/);
+    // Checks run on pull requests, including ones from forks (public repo).
+    expect(checkJob).not.toMatch(/self-hosted/);
+    expect(workflow.match(/self-hosted/g)).toHaveLength(
+      deployJob.match(/self-hosted/g)?.length ?? -1,
+    );
+  });
+
+  it("gives the deploy job no server key and writes the folder locally", () => {
+    expect(workflow).not.toMatch(/secrets\./);
+    expect(deployJob).toMatch(/PUBLISH_MODE: local/);
+    expect(deployJob).toMatch(/TARGET_DIR: \/\S+/);
+    expect(deployJob).toMatch(/timeout-minutes: \d+/);
+  });
+
+  it("empties the persistent build folder before the artifact is downloaded", () => {
+    expect(deployJob).toMatch(
+      /run: rm -rf dist publish-report\.gpg[\s\S]*actions\/download-artifact/,
+    );
+  });
+
   it("never cancels a running publish", () => {
     expect(workflow).toContain(
       "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
@@ -56,8 +84,8 @@ describe("CODEOWNERS", () => {
   });
 });
 
-// Every repo file the deploy step loads while SSH_PRIVATE_KEY is in the
-// environment: relative imports reachable from deploy/publish.ts.
+// Every repo file the deploy step loads while it can write the server folder:
+// relative imports reachable from deploy/publish.ts.
 function reachableFrom(entry: string): string[] {
   const seen = new Set<string>();
   const queue = [entry];
