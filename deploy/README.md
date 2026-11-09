@@ -69,6 +69,28 @@ maintainer merges such a change in one of two ways: let the repository admin
 bypass the Code Owner rule for that merge, or set required approvals to 0
 while keeping Code Owner review requested once a second maintainer exists.
 
+## The runner
+
+The deploy job runs on a self-hosted runner installed on the server and
+labelled `oden-deploy`; checks run on GitHub-hosted runners. The repository is
+public, so the runner must be locked down (ADR-0006). All of this is outside
+git; re-check it whenever the runner is re-registered.
+
+- **Account:** the runner service runs as `odenlabs-deploy`, which owns
+  `/srv/odenlabs/odenlabs-website/public` and is not in the `docker` group and
+  has no sudo. Check: `ps -o user= -C Runner.Listener` prints `odenlabs-deploy`.
+- **Label:** the runner has the custom label `oden-deploy` (Settings → Actions →
+  Runners → the runner → labels), so the job cannot land on another runner.
+- **Runner group (organisation settings):** limit the group that holds the
+  runner to this repository, and under _Selected workflows_ to
+  `KTH-UrbanT/odenlabs-website/.github/workflows/publish.yaml@refs/heads/main`.
+  This is what stops a workflow on a branch from using the server.
+- **Tools on the server:** `gpg`, `tar`, `find`, `xargs`, `awk`, `mv` and `curl`.
+  Node comes from the workflow (`setup-node`).
+- **Target folder:** `TARGET_DIR` in the workflow. Change it there, in a
+  reviewed pull request, if the folder moves.
+- **Offline runner:** a deploy waits in the queue until the runner is back.
+
 ## Rollout
 
 Deletion stays off until step 4. Do the steps in order.
@@ -77,9 +99,10 @@ Deletion stays off until step 4. Do the steps in order.
    - **Branches:** protect `main`: require a pull request, require review from
      Code Owners, require the `check` job to pass.
    - **Environments:** create `kth-server`; under deployment branches allow
-     only `main`. Move the four secrets `SSH_HOST`, `SSH_USERNAME`,
-     `SSH_PRIVATE_KEY`, `SSH_TARGET_DIR` from repository secrets into this
-     environment, then delete the repository-level copies.
+     only `main`. It holds no secrets: the deploy job writes the folder from
+     the runner itself (ADR-0006). Delete any old `SSH_*` repository secrets.
+   - **Runner** (see below): set up and lock down before the first publish.
+   - **Actions → General:** require approval for all outside collaborators.
    - **Key:** add your public GPG key as `deploy/maintainers/<your-id>.asc` (see
      that folder's README) in a reviewed pull request. Back up the private key
      offline.

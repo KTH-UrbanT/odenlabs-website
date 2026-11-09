@@ -48,7 +48,7 @@ import {
   publicSummary,
   type PublishReport,
 } from "./report.ts";
-import { shq, sshExecutor, type Executor } from "./ssh.ts";
+import { localExecutor, shq, sshExecutor, type Executor } from "./ssh.ts";
 
 const HERE = fileURLToPath(new URL(".", import.meta.url));
 
@@ -407,26 +407,67 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
 
 // --- CI entry point -----------------------------------------------------------
 
-function env(name: string): string {
-  const value = process.env[name];
+type Environment = Record<string, string | undefined>;
+
+function env(name: string, source: Environment = process.env): string {
+  const value = source[name];
   if (!value) throw new Error(`missing environment variable ${name}`);
   return value;
 }
 
+export type Target =
+  | { mode: "local"; targetDir: string }
+  | {
+      mode: "ssh";
+      targetDir: string;
+      host: string;
+      user: string;
+      privateKey: string;
+    };
+
+/**
+ * Where the publish goes. `PUBLISH_MODE=local` writes the folder on the
+ * machine that runs the job (the self-hosted runner on the server, ADR-0006)
+ * and needs no key; anything else is SSH with the four server secrets. A
+ * local target must be an absolute path other than the file-system root.
+ */
+export function targetFromEnv(source: Environment): Target {
+  const mode = source.PUBLISH_MODE ?? "ssh";
+  if (mode === "local") {
+    const targetDir = env("TARGET_DIR", source);
+    if (!targetDir.startsWith("/") || targetDir.replace(/\/+$/, "") === "") {
+      throw new Error("TARGET_DIR must be an absolute path other than /");
+    }
+    return { mode, targetDir };
+  }
+  if (mode !== "ssh") throw new Error(`unknown PUBLISH_MODE ${mode}`);
+  return {
+    mode,
+    targetDir: env("SSH_TARGET_DIR", source),
+    host: env("SSH_HOST", source),
+    user: env("SSH_USERNAME", source),
+    privateKey: env("SSH_PRIVATE_KEY", source),
+  };
+}
+
 async function main(): Promise<void> {
   const repo = join(HERE, "..");
-  const executor = sshExecutor({
-    host: env("SSH_HOST"),
-    user: env("SSH_USERNAME"),
-    privateKey: env("SSH_PRIVATE_KEY"),
-  });
+  const target = targetFromEnv(process.env);
+  const executor =
+    target.mode === "local"
+      ? localExecutor()
+      : sshExecutor({
+          host: target.host,
+          user: target.user,
+          privateKey: target.privateKey,
+        });
   try {
     const summaryFile = process.env.GITHUB_STEP_SUMMARY;
     const result = await publish({
       distDir: join(repo, "dist"),
       rulesDir: join(repo, "deploy", "rules"),
       maintainersDir: join(repo, "deploy", "maintainers"),
-      targetDir: env("SSH_TARGET_DIR"),
+      targetDir: target.targetDir,
       siteUrl: env("SITE_URL"),
       commit: env("GITHUB_SHA"),
       reportFile: process.env.REPORT_FILE ?? join(repo, "publish-report.gpg"),
