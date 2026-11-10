@@ -89,6 +89,13 @@ git; re-check it whenever the runner is re-registered.
   Node comes from the workflow (`setup-node`).
 - **Target folder:** `TARGET_DIR` in the workflow. Change it there, in a
   reviewed pull request, if the folder moves.
+- **Folder permissions:** everything under the target folder must be writable
+  by the runner's group, not only the folder itself: removing a file needs
+  write access to the directory that holds it, and a publish that cannot do
+  so stops with `remove-failed: ... Permission denied` (this stopped the first
+  cleanup on 2026-11-10). On the server, once: `chgrp -R odenlabs`,
+  `chmod -R g+rwX`, and `chmod g+s` on every directory, so that files and
+  folders others create later keep the group.
 - **Offline runner:** a deploy waits in the queue until the runner is back.
 
 ## Rollout

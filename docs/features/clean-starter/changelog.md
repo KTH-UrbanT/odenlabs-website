@@ -27,10 +27,14 @@ removed or left behind is a GPG-encrypted artifact ([ADR-0004](./adr/0004-delive
 **Operational notes:**
 
 - Migration: none.
-- Config: GitHub environment secrets (server key, GPG public key) are main-only; the workflow has
-  separate check and deploy jobs. `deletion` ships as `off`, so merging deletes nothing.
+- Config: the deploy job runs on the self-hosted runner on the server and writes the site folder directly,
+  so no server key exists in GitHub ([ADR-0006](./adr/0006-publish-from-a-self-hosted-runner-on-the-server.md)).
+  The runner, its group and the folder permissions are set up outside git; see `deploy/README.md`.
 - Rollback: revert the commit and republish; a publish interrupted inside the rename step can leave some pages new and some old (ADR-0003, spec §8 R-07).
-  The previous publish record stays on the server and is read by the next run.
+  The previous publish record stays on the server and is read by the next run. Deleted starter files are not restored.
+- Live on `oden.abe.kth.se` since 2026-11-10: the 120 inherited starter files are gone (approved in PR #3,
+  deletion switched on in PR #4). The first cleanup attempt stopped on folder permissions and changed nothing
+  but two top-level files; it succeeded after the server folder was made group-writable.
 
 **Acceptance criteria delivered:** AC-01, AC-02, AC-03, AC-04, AC-06, AC-07, AC-07b, AC-08–AC-11b, AC-12,
 AC-13, AC-13b, AC-14.
