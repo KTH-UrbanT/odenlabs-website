@@ -26,7 +26,7 @@ A small English-only site with the research group's own identity is live at KTH,
 | 5 | Research themes as the site's spine → see [Not yet specified](#not-yet-specified) | idea-brief.md §7 Recommendation | fog | idea |
 | 6 | Projects pages grouped under each theme | idea-brief.md §7 Recommendation | M | idea |
 | 7 | Automatic publications import → see [Not yet specified](#not-yet-specified) | idea-brief.md §6 Risks | fog | idea |
-| 8 | Go live at KTH: confirm the existing SSH deploy to oden.abe.kth.se replaces the starter with the real site (starter removal now lives in step 1 / `clean-starter`; what remains is the final-domain check, D3) | idea-brief.md §6 Risks | S | idea |
+| 8 | Go live at KTH: confirm the deploy to oden.abe.kth.se (self-hosted runner, `clean-starter`) serves the real site (starter removal now lives in step 1 / `clean-starter`; what remains is the final-domain check, D3) | idea-brief.md §6 Risks | S | idea |
 
 ## Not yet specified
 
@@ -89,4 +89,4 @@ Fog steps (5, 7) have no wave; their recon passes run alongside. Hosting recon i
 
 | Step | Shipped | Link |
 |---|---|---|
-| 1 (partial) | 2026-10-09 | [changelog](features/clean-starter/changelog.md); PR pending |
+| 1 (partial) | 2026-11-10 | [changelog](features/clean-starter/changelog.md); PRs [#1](https://github.com/KTH-UrbanT/odenlabs-website/pull/1)–[#4](https://github.com/KTH-UrbanT/odenlabs-website/pull/4); starter removed from the live server |
