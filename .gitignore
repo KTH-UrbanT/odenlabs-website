@@ -13,3 +13,6 @@ dist/
 # SDD per-developer files
 .claude/*.local.md
 .worktrees/
+
+# The publish report is written next to the checkout (encrypted, maintainers only)
+publish-report.gpg
