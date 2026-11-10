@@ -1,1 +1,1 @@
-{ "deletion": "off", "removalLimit": 20 }
+{ "deletion": "on", "removalLimit": 20 }
