@@ -1,7 +1,6 @@
 ---
 name: Sacha Thibault
 role: Research engineer
-themes: [urban-carbon-accounting]
 alumni: true
 ---
 
