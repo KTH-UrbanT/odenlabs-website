@@ -9,7 +9,6 @@ links:
     url: https://www.kth.se/profile/katper
   - label: Medium
     url: https://medium.com/@pereverza.kate
-order: 3
 ---
 
 Kateryna researches urban transition governance, drawing on transition studies, future studies, complex systems theory and transdisciplinarity. She developed the concept of transformative portfolio-based approaches: systemic, long-term ways of steering multi-actor and multi-level urban transitions beyond single projects. Her work covers multi-level governance configurations, transition intermediaries, the reframing of challenges, and participatory backcasting for energy systems.

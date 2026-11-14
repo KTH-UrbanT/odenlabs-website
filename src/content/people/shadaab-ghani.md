@@ -9,7 +9,6 @@ links:
     url: https://shadaabghani1.github.io/
   - label: ResearchGate
     url: https://www.researchgate.net/profile/Shadaab-Ghani/research
-order: 5
 ---
 
 Shadaab is a doctoral student in computer science working on trustworthy language-model systems for decision support. His research covers hallucination detection, retrieval-augmented generation, source attribution and multi-agent orchestration, with building energy efficiency as the main application. He designed SPARA, a research testbed for energy advice to housing cooperatives that combines retrieval-augmented generation with structured building data.

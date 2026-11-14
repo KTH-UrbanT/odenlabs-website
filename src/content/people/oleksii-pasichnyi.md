@@ -13,7 +13,6 @@ email: oleksi@kth.se
 links:
   - label: ORCID
     url: https://orcid.org/0000-0001-5550-1601
-order: 1
 ---
 
 Oleksii works on urban data analytics for energy transitions: urban building energy modelling, data-driven planning of building energy retrofitting, whole-life carbon of buildings at urban scale, and interactive dashboards and decision-support tools for cities and property owners. He also works with participatory methods and scenario planning.
