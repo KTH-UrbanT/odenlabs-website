@@ -53,4 +53,18 @@ const projects = defineCollection({
   }),
 });
 
-export const collections = { themes, people, projects };
+const education = defineCollection({
+  loader: entries("education"),
+  schema: z.object({
+    title: z.string(),
+    summary: z.string(),
+    kind: z.enum(["course", "programme", "handbook"]),
+    code: z.string().optional(),
+    people: z.array(reference("people")).default([]),
+    url: z.url().optional(),
+    order: z.number().int().default(0),
+    draft,
+  }),
+});
+
+export const collections = { themes, people, projects, education };

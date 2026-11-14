@@ -8,8 +8,8 @@ Step-by-step recipes for content editors: `docs/editing-content.md`.
 
 ## What you may change
 
-Content editors may change **only** `src/content/themes/`, `src/content/people/` and
-`src/content/projects/`: one Markdown file per entry, plus images next to it. Everything else
+Content editors may change **only** `src/content/themes/`, `src/content/people/`,
+`src/content/projects/` and `src/content/education/`: one Markdown file per entry, plus images next to it. Everything else
 (code, tests, config, `.github/`, `deploy/`, `docs/`, this file, the `README.md` files that
 document the fields) belongs to the maintainer and needs a Code Owner review. If a request
 cannot be done inside those folders, **stop and tell the user** that a maintainer has to do it.
@@ -41,8 +41,8 @@ Do not work around it.
 - The front matter fields are listed in the `README.md` of each folder. Do not add fields.
 - `draft: true` hides an entry and removes its pages. Delete the line to publish.
 - Published entries must not reference drafts, and must not contain `TODO(`.
-- People are listed by surname, with the bio next to the name. People have no pages of
-  their own. Themes and projects have list and detail pages.
+- People are listed by surname, with the bio next to the name. People and education entries
+  have no pages of their own (one list page each). Themes and projects have list and detail pages.
 - Section pages exist only while they have a published entry.
 
 ## Workflow

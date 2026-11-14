@@ -13,8 +13,8 @@ const previewDrafts = process.env.SHOW_DRAFTS === "1";
  * The entries of a collection that pages may show: published ones, plus drafts
  * while previewing with `npm run dev`.
  */
-export async function getVisible<C extends "themes" | "people" | "projects">(
-  name: C,
-) {
+export async function getVisible<
+  C extends "themes" | "people" | "projects" | "education",
+>(name: C) {
   return visibleEntries(await getCollection(name), previewDrafts);
 }
