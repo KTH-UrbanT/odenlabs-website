@@ -3,6 +3,9 @@ name: Hossein Shahrokni
 role: Researcher
 themes: [urban-data-digital-twins]
 email: hosseins@kth.se
+links:
+  - label: LocalLife
+    url: https://locallife.se
 order: 2
 ---
 
