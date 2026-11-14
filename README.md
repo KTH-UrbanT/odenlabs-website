@@ -1,6 +1,6 @@
-# Oden Lab website
+# OdenLabs website
 
-The website of the Oden Lab research group at KTH, built with [Astro](https://astro.build)
+The website of the OdenLabs research group at KTH, built with [Astro](https://astro.build)
 as a static site and published at <https://oden.abe.kth.se/>.
 
 ## Run it locally

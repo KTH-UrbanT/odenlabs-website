@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Static website for the Oden Lab research group at KTH, built with Astro and deployed
+Static website for the OdenLabs research group at KTH, built with Astro and deployed
 to `oden.abe.kth.se`. English only, one maintainer. Architecture and the reasoning
 behind it: `docs/architecture-map.md` and `docs/adr/`.
 
