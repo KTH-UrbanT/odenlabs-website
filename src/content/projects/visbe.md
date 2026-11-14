@@ -11,4 +11,4 @@ url: https://www.senseablestockholm.org/projects/koldioxidbudgetering-i-byggd-mi
 
 Also referred to as "Carbon Budgeting Kista – Buildings".
 
-Co-PI: Tove Malmqvist Stigell, KTH.
+Co-PI: [Tove Malmqvist Stigell](https://www.kth.se/profile/tovem), KTH.
