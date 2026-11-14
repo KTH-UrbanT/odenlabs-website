@@ -4,7 +4,6 @@ role: Postdoc
 themes: [urban-building-energy-modelling]
 photo: ./lukas-dahlstrom.jpg
 email: lukasdah@kth.se
-order: 6
 ---
 
 Lukas has been a postdoc at KTH since September 2026 and is a lead contributor to the DASHER project. He works on large-scale modelling of building energy demand, including building archetypes, regional building stock models and energy retrofit scenarios for historic buildings and districts.

@@ -7,7 +7,6 @@ email: hosseins@kth.se
 links:
   - label: LocalLife
     url: https://locallife.se
-order: 2
 ---
 
 Hossein is a researcher and docent in Industrial Ecology. He developed the Smart Urban Metabolism framework, which uses high-resolution data to monitor and analyse energy and material flows in cities. His work covers big data analytics of building stocks and AI methods for urban energy, including retrieval-augmented generation and agentic systems.
