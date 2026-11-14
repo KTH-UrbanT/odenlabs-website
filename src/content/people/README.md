@@ -1,7 +1,8 @@
 # People
 
 One Markdown file per person. The file name is the person's ID
-(`jane-doe.md` → `jane-doe`); projects refer to people by it.
+(`jane-doe.md` → `jane-doe`); projects refer to people by it. People have no
+pages of their own: the People page lists everyone, with the bio next to the name.
 
 ```md
 ---
@@ -14,11 +15,11 @@ links: # optional
   - label: Google Scholar
     url: https://scholar.google.com/...
 alumni: false # optional (default false)
-order: 0 # optional, lower comes first (default 0)
+order: 0 # optional, lower comes first (default 0); people with the same order are listed by surname
 draft: true # optional: keep an unfinished entry off the site (default false)
 ---
 
-Short bio in Markdown.
+Short bio in Markdown, shown next to the name.
 ```
 
 A theme ID that does not exist fails the build.
