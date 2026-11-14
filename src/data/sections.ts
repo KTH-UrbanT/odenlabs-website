@@ -13,8 +13,8 @@ export interface Section {
 }
 
 export const sections: readonly Section[] = [
-  { label: "Research", href: "/research/", requires: "themes" },
   { label: "People", href: "/people/", requires: "people" },
+  { label: "Research", href: "/research/", requires: "themes" },
   { label: "Education", href: "/education/", requires: "education" },
   { label: "Join/Contact", href: "/join/" },
 ];
