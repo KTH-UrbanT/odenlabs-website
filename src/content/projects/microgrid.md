@@ -4,7 +4,4 @@ summary: Energy communities that share locally produced energy, tested in pilots
 themes: [energy-communities]
 funder: Swedish Energy Agency
 url: https://electricityinnovation.se/en/project/microgrid-in-hammarby-sjostad/
-draft: true
 ---
-
-TODO(maintainer): KTH's role and people.

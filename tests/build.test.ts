@@ -89,9 +89,56 @@ function offeredLinks(page: string): { label: string; href: string }[] {
     .filter((l) => sections.some((s) => s.href === l.href));
 }
 
+// Read straight from the content files, not through the helpers the site uses,
+// so the site cannot pass by agreeing with itself.
+type Collection = "themes" | "people" | "projects";
+const route: Record<Collection, string> = {
+  themes: "research",
+  people: "people",
+  projects: "projects",
+};
+function contentEntries(collection: Collection) {
+  const dir = `src/content/${collection}`;
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".md") && f !== "README.md")
+    .map((f) => {
+      const front = /^---\n([\s\S]*?)\n---/.exec(
+        readFileSync(join(dir, f), "utf8"),
+      )?.[1];
+      return { id: f.slice(0, -3), draft: /^draft: true$/m.test(front ?? "") };
+    });
+}
+
+describe("drafts stay out of the build", () => {
+  it("builds no page for a draft entry", () => {
+    const leaked = (Object.keys(route) as Collection[]).flatMap((c) =>
+      contentEntries(c)
+        .filter((e) => e.draft)
+        .map((e) => `${route[c]}/${e.id}/index.html`)
+        .filter((file) => existsSync(join(dist, file))),
+    );
+    expect(leaked).toEqual([]);
+  });
+
+  it("builds a section's pages only when it has a published entry", () => {
+    for (const c of Object.keys(route) as Collection[]) {
+      const published = contentEntries(c).filter((e) => !e.draft);
+      expect(existsSync(join(dist, route[c], "index.html"))).toBe(
+        published.length > 0,
+      );
+      for (const e of published) {
+        expect(existsSync(join(dist, route[c], e.id, "index.html"))).toBe(
+          // People have no pages of their own: the bio sits on the list.
+          c !== "people",
+        );
+      }
+    }
+  });
+});
+
 describe("header navigation (AC-03)", () => {
-  // Decided from the files in src/pages directly, not through the helper the
-  // header uses, so the header cannot pass by finding no pages at all.
+  // Decided from the files in src/pages and src/content directly, not through
+  // the helper the header uses, so the header cannot pass by finding nothing.
   const hasPage = (href: string) => {
     const slug = href.replace(/^\/|\/$/g, "");
     return ["astro", "md", "html"].some(
@@ -101,17 +148,24 @@ describe("header navigation (AC-03)", () => {
     );
   };
 
-  it("offers every planned section that has a page, in planned order with its label", () => {
-    const expected = sections.filter((s) => hasPage(s.href));
+  it("offers every planned section that has a page or published content, in planned order with its label", () => {
+    const expected = sections
+      .filter(
+        (s) =>
+          hasPage(s.href) ||
+          (s.requires !== undefined &&
+            contentEntries(s.requires).some((e) => !e.draft)),
+      )
+      .map(({ label, href }) => ({ label, href }));
     expect(offeredLinks(html("index.html"))).toEqual(expected);
   });
 });
 
 describe("header navigation with real section pages (AC-03)", () => {
-  // The real site has no section pages yet, so the test above compares two
-  // empty lists. Build a temporary copy of the site with section pages planted
-  // (one flat, one as a folder index; "People" deliberately left out) and
-  // check the header offers exactly those, in planned order with their labels.
+  // Build a temporary copy of the site with no content and section pages
+  // planted (one flat, one as a folder index; "People" deliberately left out)
+  // and check the header offers exactly those, in planned order with their
+  // labels. Without content, the content-backed sections stay out.
   const planted: Record<string, string> = {
     "join/index.astro": "/join/",
     "research.astro": "/research/",
@@ -130,6 +184,14 @@ describe("header navigation with real section pages (AC-03)", () => {
       cpSync(entry, join(root, entry), { recursive: true });
     }
     symlinkSync(resolve("node_modules"), join(root, "node_modules"), "dir");
+    for (const collection of ["themes", "people", "projects"]) {
+      const dir = join(root, "src/content", collection);
+      for (const file of readdirSync(dir)) {
+        if (file.endsWith(".md") && file !== "README.md") {
+          rmSync(join(dir, file));
+        }
+      }
+    }
     for (const page of Object.keys(planted)) {
       const file = join(root, "src/pages", page);
       mkdirSync(dirname(file), { recursive: true });

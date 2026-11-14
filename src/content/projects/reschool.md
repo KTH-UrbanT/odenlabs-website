@@ -4,7 +4,4 @@ summary: Making energy communities more efficient through technology and user be
 themes: [energy-communities]
 funder: Horizon Europe
 url: https://www.reschool-project.eu
-draft: true
 ---
-
-TODO(maintainer): KTH's role and people.
