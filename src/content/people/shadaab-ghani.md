@@ -2,6 +2,7 @@
 name: Shadaab Ghani
 role: Doctoral student
 themes: [urban-data-digital-twins, building-energy-renovation]
+photo: ./shadaab-ghani.jpg
 email: shadaab@kth.se
 links:
   - label: Personal website

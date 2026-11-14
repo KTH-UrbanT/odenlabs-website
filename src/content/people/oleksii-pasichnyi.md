@@ -8,6 +8,7 @@ themes:
     urban-carbon-accounting,
     urban-data-digital-twins,
   ]
+photo: ./oleksii-pasichnyi.jpg
 email: oleksi@kth.se
 links:
   - label: ORCID

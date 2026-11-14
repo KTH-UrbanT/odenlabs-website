@@ -2,6 +2,7 @@
 name: Mohammadhossein Alizadeh
 role: Doctoral student
 themes: [urban-building-energy-modelling, building-energy-renovation]
+photo: ./mohammadhossein-alizadeh.jpg
 email: alizad@kth.se
 order: 4
 ---
