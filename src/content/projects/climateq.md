@@ -4,7 +4,4 @@ summary: A Swedish-language chatbot, QBot, that helps upper-secondary students l
 themes: [everyday-sustainability]
 funder: Formas
 url: https://climateq.se
-draft: true
 ---
-
-TODO(maintainer): project description and people.

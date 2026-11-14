@@ -4,7 +4,4 @@ summary: Linking data on grocery purchases with data on household waste to help 
 themes: [everyday-sustainability]
 funder: Formas
 url: https://www.kth.se/en/seed/forskning/alk/pagaende-forskningsprojekt/matklok-minska-matsvinn-genom-att-koppla-ihop-livsmedelspasen-med-matavfallspasen-1.1302055
-draft: true
 ---
-
-TODO(maintainer): project description and people.

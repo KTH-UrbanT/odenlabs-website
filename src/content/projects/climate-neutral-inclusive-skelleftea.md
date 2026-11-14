@@ -5,7 +5,4 @@ themes: [urban-transition-governance]
 people: [kateryna-pereverza]
 funder: Formas
 url: https://www.skellefteasciencecity.se/en/projekt/climate-neutral-and-inclusive-communities-skelleftea/
-draft: true
 ---
-
-TODO(maintainer): project description and KTH's role.
