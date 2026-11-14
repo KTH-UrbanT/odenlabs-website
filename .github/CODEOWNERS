@@ -1,7 +1,23 @@
-# Maintainers own the publishing rules, the publish worker and the workflow
-# (ADR-0005). Branch protection must require their review for these paths.
-/deploy/   @pasichnyi
-/.github/  @pasichnyi
-# The deploy step imports these while the server key is in its environment.
+# The maintainer owns everything except the content entries that group members
+# edit (ADR-0005, ADR-0006). Branch protection must require Code Owner review.
+# A later pattern overrides an earlier one, and a pattern with no owner leaves
+# its files open: a pull request that touches only those needs just the check.
+
+# Code, tests, config, docs, agent instructions, the publish worker, the workflow.
+/*            @pasichnyi
+/.github/     @pasichnyi
+/deploy/      @pasichnyi
+/docs/        @pasichnyi
+/public/      @pasichnyi
+/src/         @pasichnyi
+/tests/       @pasichnyi
+
+# The deploy step imports these while it can write the server folder.
 /src/data/sections.ts   @pasichnyi
 /src/lib/navigation.ts  @pasichnyi
+
+# Open to group members: the content entries (and images next to them) ...
+/src/content/
+
+# ... but not the README files there: they document the fields for agents.
+/src/content/**/README.md  @pasichnyi
