@@ -1,6 +1,7 @@
 ---
 name: Olena Tatarchenko
 role: Teaching assistant
+photo: ./olena-tatarchenko.jpg
 email: olenata@kth.se
 order: 7
 ---

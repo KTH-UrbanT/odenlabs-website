@@ -2,6 +2,7 @@
 name: Hossein Shahrokni
 role: Researcher
 themes: [urban-data-digital-twins]
+photo: ./hossein-shahrokni.jpg
 email: hosseins@kth.se
 links:
   - label: LocalLife

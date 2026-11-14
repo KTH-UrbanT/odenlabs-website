@@ -2,6 +2,7 @@
 name: Lukas Dahlström
 role: Postdoc
 themes: [urban-building-energy-modelling]
+photo: ./lukas-dahlstrom.jpg
 email: lukasdah@kth.se
 order: 6
 ---

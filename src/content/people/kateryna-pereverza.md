@@ -2,6 +2,7 @@
 name: Kateryna Pereverza
 role: Researcher
 themes: [urban-transition-governance]
+photo: ./kateryna-pereverza.jpg
 email: katper@kth.se
 links:
   - label: KTH profile
