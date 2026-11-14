@@ -4,6 +4,10 @@ Static website for the OdenLabs research group at KTH, built with Astro and depl
 to `oden.abe.kth.se`. English only, one maintainer. Architecture and the reasoning
 behind it: `docs/architecture-map.md` and `docs/adr/`.
 
+Agents and content editors: the rules for working in this repository are in `AGENTS.md`.
+
+@AGENTS.md
+
 ## Commands
 
 - `npm run dev` — local dev server; it also shows `draft: true` content (marked), which a build never does

@@ -77,10 +77,47 @@ describe("publish workflow", () => {
 });
 
 describe("CODEOWNERS", () => {
+  const text = readFileSync(".github/CODEOWNERS", "utf8");
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"));
+  const patternOf = (line: string) => line.split(/\s+/)[0];
+  const index = (pattern: string) =>
+    lines.findIndex((l) => patternOf(l) === pattern);
+
   it("makes the maintainer own deploy/ and .github/", () => {
-    const owners = readFileSync(".github/CODEOWNERS", "utf8");
-    expect(owners).toMatch(/^\/deploy\/\s+@pasichnyi$/m);
-    expect(owners).toMatch(/^\/\.github\/\s+@pasichnyi$/m);
+    expect(text).toMatch(/^\/deploy\/\s+@pasichnyi$/m);
+    expect(text).toMatch(/^\/\.github\/\s+@pasichnyi$/m);
+  });
+
+  // Group members may edit content entries only. Agent instructions, the
+  // guards (src/lib, the schema, tests) and the workflow stay with the
+  // maintainer, so a content pull request cannot change what the agents are
+  // told or weaken a check.
+  it.each([
+    "/*",
+    "/.github/",
+    "/deploy/",
+    "/docs/",
+    "/public/",
+    "/src/",
+    "/tests/",
+  ])("keeps %s with the maintainer", (pattern) => {
+    expect(index(pattern)).toBeGreaterThanOrEqual(0);
+    expect(lines[index(pattern)]).toMatch(/\s@pasichnyi$/);
+  });
+
+  it("opens only src/content/ to group members, after the pattern that owns src/", () => {
+    const open = lines.filter((l) => l.split(/\s+/).length === 1);
+    expect(open).toEqual(["/src/content/"]);
+    expect(index("/src/content/")).toBeGreaterThan(index("/src/"));
+  });
+
+  it("keeps the field documentation in src/content/ with the maintainer", () => {
+    const readme = index("/src/content/**/README.md");
+    expect(readme).toBeGreaterThan(index("/src/content/"));
+    expect(lines[readme]).toMatch(/\s@pasichnyi$/);
   });
 });
 
@@ -111,6 +148,7 @@ describe("CODEOWNERS coverage of the deploy step", () => {
   const owners = readFileSync(".github/CODEOWNERS", "utf8")
     .split("\n")
     .filter((l) => l.trim() && !l.startsWith("#"))
+    .filter((l) => l.trim().split(/\s+/).length > 1) // a pattern with no owner is open
     .map((l) => l.split(/\s+/)[0]);
   const covered = (file: string) =>
     owners.some((p) =>
