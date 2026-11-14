@@ -5,7 +5,7 @@ themes: [urban-building-energy-modelling]
 people: [oleksii-pasichnyi, xavier-faure, hossein-shahrokni]
 funder: Swedish Energy Agency
 start: 2018-09-01
-end: 2021-02-28
+end: 2022-12-31
 url: https://github.com/KTH-UrbanT/MUBES_UBEM
 ---
 
