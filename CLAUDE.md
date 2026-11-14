@@ -6,7 +6,7 @@ behind it: `docs/architecture-map.md` and `docs/adr/`.
 
 ## Commands
 
-- `npm run dev` — local dev server
+- `npm run dev` — local dev server; it also shows `draft: true` content (marked), which a build never does
 - `npm run build` — static build into `dist/`
 - `npm test` — Vitest: unit tests + the build smoke test (`tests/build.test.ts`)
 - `npm run lint` — `astro check` (types + content schema) and `prettier --check .`

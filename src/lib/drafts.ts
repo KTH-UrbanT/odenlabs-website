@@ -14,6 +14,17 @@ export function publishedOnly<T extends { data: unknown }>(entries: T[]): T[] {
   return entries.filter((entry) => !isDraft(entry));
 }
 
+/**
+ * What a page may show: published entries, plus drafts while previewing
+ * locally (`npm run dev`, see visible.ts). A build never includes a draft.
+ */
+export function visibleEntries<T extends { data: unknown }>(
+  entries: T[],
+  previewDrafts: boolean,
+): T[] {
+  return previewDrafts ? entries : publishedOnly(entries);
+}
+
 /** True when the text still holds a `TODO(...)` placeholder. */
 export const hasPlaceholder = (text: string): boolean => PLACEHOLDER.test(text);
 

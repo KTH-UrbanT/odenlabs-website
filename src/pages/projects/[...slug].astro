@@ -1,0 +1,118 @@
+---
+import { render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import Card from "../../components/Card.astro";
+import DraftBadge from "../../components/DraftBadge.astro";
+import Related from "../../components/Related.astro";
+import { getVisible } from "../../lib/visible";
+
+// The section and its pages exist only while there are projects to show.
+export async function getStaticPaths() {
+  const projects = await getVisible("projects");
+  if (projects.length === 0) return [];
+  return [
+    { params: { slug: undefined } },
+    ...projects.map((project) => ({ params: { slug: project.id } })),
+  ];
+}
+
+const { slug } = Astro.params;
+const projects = (await getVisible("projects")).sort((a, b) =>
+  a.data.title.localeCompare(b.data.title),
+);
+const project = slug ? projects.find((p) => p.id === slug) : undefined;
+const Content = project ? (await render(project)).Content : undefined;
+
+const month = (date?: Date) =>
+  date?.toLocaleDateString("en-GB", {
+    year: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  });
+const period = project
+  ? [month(project.data.start), month(project.data.end)]
+      .filter(Boolean)
+      .join(" to ")
+  : "";
+
+const themes = (await getVisible("themes")).filter((t) =>
+  project?.data.themes.some((ref) => ref.id === t.id),
+);
+const people = (await getVisible("people"))
+  .filter((p) => project?.data.people.some((ref) => ref.id === p.id))
+  .sort((a, b) => a.data.name.localeCompare(b.data.name));
+---
+
+{project && Content ? (
+  <Base title={project.data.title} description={project.data.summary}>
+    <h1>
+      {project.data.title} {project.data.draft && <DraftBadge />}
+    </h1>
+    <p class="lead">{project.data.summary}</p>
+    <dl>
+      {project.data.funder && (
+        <>
+          <dt>Funder</dt>
+          <dd>{project.data.funder}</dd>
+        </>
+      )}
+      {period && (
+        <>
+          <dt>Period</dt>
+          <dd>{period}</dd>
+        </>
+      )}
+      {project.data.url && (
+        <>
+          <dt>Project page</dt>
+          <dd>
+            <a href={project.data.url}>{project.data.url}</a>
+          </dd>
+        </>
+      )}
+    </dl>
+    <Content />
+    <Related
+      heading="Research themes"
+      items={themes.map((t) => ({
+        href: `/research/${t.id}/`,
+        label: t.data.title,
+        draft: t.data.draft,
+      }))}
+    />
+    <Related
+      heading="People"
+      items={people.map((p) => ({
+        href: `/people/${p.id}/`,
+        label: p.data.name,
+        draft: p.data.draft,
+      }))}
+    />
+  </Base>
+) : (
+  <Base title="Projects" description="The projects of the group.">
+    <h1>Projects</h1>
+    {projects.map((p) => (
+      <Card
+        href={`/projects/${p.id}/`}
+        title={p.data.title}
+        meta={p.data.funder}
+        summary={p.data.summary}
+        draft={p.data.draft}
+      />
+    ))}
+  </Base>
+)}
+
+<style>
+  .lead {
+    font-size: var(--text-lg);
+    color: var(--color-text-muted);
+  }
+  dt {
+    font-weight: var(--weight-bold);
+  }
+  dd {
+    margin: 0 0 var(--space-3);
+  }
+</style>

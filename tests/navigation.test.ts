@@ -85,6 +85,36 @@ describe("offeredSections", () => {
     const typo = [{ label: "Research", href: "/reserch/" }];
     expect(offeredSections(typo, new Set(["research/index.html"]))).toEqual([]);
   });
+
+  describe("content-backed sections", () => {
+    const backed = [
+      { label: "Research", href: "/research/", requires: "themes" as const },
+      { label: "People", href: "/people/", requires: "people" as const },
+      { label: "Join/Contact", href: "/join/" },
+    ];
+
+    it("offers a section once its collection has something to show", () => {
+      expect(offeredSections(backed, new Set(), new Set(["people"]))).toEqual([
+        backed[1],
+      ]);
+    });
+
+    it("offers nothing while every collection is empty", () => {
+      expect(offeredSections(backed, new Set(), new Set())).toEqual([]);
+    });
+
+    it("still offers a fixed page that exists, with or without content", () => {
+      expect(
+        offeredSections(backed, new Set(["join/index.html"]), new Set()),
+      ).toEqual([backed[2]]);
+    });
+
+    it("does not offer a section for the wrong collection", () => {
+      expect(offeredSections(backed, new Set(), new Set(["projects"]))).toEqual(
+        [],
+      );
+    });
+  });
 });
 
 describe("missingPlannedPages", () => {

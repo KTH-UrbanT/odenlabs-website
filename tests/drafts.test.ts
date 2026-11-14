@@ -5,6 +5,7 @@ import {
   hasPlaceholder,
   isDraft,
   publishedOnly,
+  visibleEntries,
 } from "../src/lib/drafts";
 
 const theme = (id: string, data = {}, body = "") => ({
@@ -32,6 +33,12 @@ describe("drafts", () => {
   it("lists published entries only", () => {
     const all = [theme("a"), theme("b", { draft: true }), theme("c")];
     expect(publishedOnly(all).map((e) => e.id)).toEqual(["a", "c"]);
+  });
+
+  it("shows drafts only while previewing", () => {
+    const all = [theme("a"), theme("b", { draft: true })];
+    expect(visibleEntries(all, false).map((e) => e.id)).toEqual(["a"]);
+    expect(visibleEntries(all, true).map((e) => e.id)).toEqual(["a", "b"]);
   });
 
   it.each(["TODO(maintainer): x", "a TODO(maintainer)", "TODO(anything)"])(

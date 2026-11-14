@@ -1,0 +1,40 @@
+---
+import DraftBadge from "./DraftBadge.astro";
+
+interface Props {
+  href: string;
+  title: string;
+  summary?: string;
+  /** A short line under the title (a role, a funder). */
+  meta?: string;
+  draft?: boolean;
+}
+
+const { href, title, summary, meta, draft = false } = Astro.props;
+---
+
+<article>
+  <h2>
+    <a href={href}>{title}</a> {draft && <DraftBadge />}
+  </h2>
+  {meta && <p class="meta">{meta}</p>}
+  {summary && <p>{summary}</p>}
+</article>
+
+<style>
+  article {
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-xl);
+  }
+  p {
+    margin: 0 0 var(--space-2);
+  }
+  .meta {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+</style>

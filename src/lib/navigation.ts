@@ -5,12 +5,21 @@ export function hrefToFile(href: string): string {
   return `${href.replace(/^\/+/, "")}index.html`;
 }
 
-/** Planned sections whose page is among the built files, in planned order. */
+/**
+ * Planned sections to offer, in planned order: those whose page is among the
+ * built files, or whose content collection has something to show (its pages
+ * are generated from that content, so they exist exactly then).
+ */
 export function offeredSections<S extends Section>(
   planned: readonly S[],
   builtFiles: ReadonlySet<string>,
+  available: ReadonlySet<string> = new Set(),
 ): S[] {
-  return planned.filter((s) => builtFiles.has(hrefToFile(s.href)));
+  return planned.filter(
+    (s) =>
+      builtFiles.has(hrefToFile(s.href)) ||
+      (s.requires !== undefined && available.has(s.requires)),
+  );
 }
 
 /** Planned sections whose page is missing from the built files. */

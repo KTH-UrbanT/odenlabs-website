@@ -1,0 +1,106 @@
+---
+import { render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import Card from "../../components/Card.astro";
+import DraftBadge from "../../components/DraftBadge.astro";
+import Related from "../../components/Related.astro";
+import { getVisible } from "../../lib/visible";
+
+// The section and its pages exist only while there are people to show.
+export async function getStaticPaths() {
+  const people = await getVisible("people");
+  if (people.length === 0) return [];
+  return [
+    { params: { slug: undefined } },
+    ...people.map((person) => ({ params: { slug: person.id } })),
+  ];
+}
+
+const { slug } = Astro.params;
+const people = (await getVisible("people")).sort(
+  (a, b) =>
+    a.data.order - b.data.order || a.data.name.localeCompare(b.data.name),
+);
+const current = people.filter((p) => !p.data.alumni);
+const alumni = people.filter((p) => p.data.alumni);
+const person = slug ? people.find((p) => p.id === slug) : undefined;
+const Content = person ? (await render(person)).Content : undefined;
+
+const themes = (await getVisible("themes")).filter((t) =>
+  person?.data.themes.some((ref) => ref.id === t.id),
+);
+const projects = (await getVisible("projects"))
+  .filter((p) => person && p.data.people.some((ref) => ref.id === person.id))
+  .sort((a, b) => a.data.title.localeCompare(b.data.title));
+---
+
+{person && Content ? (
+  <Base title={person.data.name}>
+    <h1>
+      {person.data.name} {person.data.draft && <DraftBadge />}
+    </h1>
+    <p class="role">{person.data.role}</p>
+    {person.data.email && (
+      <p>
+        <a href={`mailto:${person.data.email}`}>{person.data.email}</a>
+      </p>
+    )}
+    {person.data.links.length > 0 && (
+      <ul>
+        {person.data.links.map((link) => (
+          <li>
+            <a href={link.url}>{link.label}</a>
+          </li>
+        ))}
+      </ul>
+    )}
+    <Content />
+    <Related
+      heading="Research themes"
+      items={themes.map((t) => ({
+        href: `/research/${t.id}/`,
+        label: t.data.title,
+        draft: t.data.draft,
+      }))}
+    />
+    <Related
+      heading="Projects"
+      items={projects.map((p) => ({
+        href: `/projects/${p.id}/`,
+        label: p.data.title,
+        draft: p.data.draft,
+      }))}
+    />
+  </Base>
+) : (
+  <Base title="People" description="The members of the group.">
+    <h1>People</h1>
+    {current.map((p) => (
+      <Card
+        href={`/people/${p.id}/`}
+        title={p.data.name}
+        meta={p.data.role}
+        draft={p.data.draft}
+      />
+    ))}
+    {alumni.length > 0 && <h2 class="group">Alumni</h2>}
+    {alumni.map((p) => (
+      <Card
+        href={`/people/${p.id}/`}
+        title={p.data.name}
+        meta={p.data.role}
+        draft={p.data.draft}
+      />
+    ))}
+  </Base>
+)}
+
+<style>
+  .role {
+    font-size: var(--text-lg);
+    color: var(--color-text-muted);
+  }
+  .group {
+    margin-top: var(--space-12);
+  }
+</style>
