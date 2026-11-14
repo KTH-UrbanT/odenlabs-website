@@ -8,4 +8,4 @@ start: 2025-09-01
 end: 2027-08-31
 ---
 
-Funded by the Swedish Energy Agency's call "Design for energy efficient everyday life". Partners include LocalLife and ElectriCITY.
+Funded by the Swedish Energy Agency's call "Design for energy efficient everyday life". LocalLife Sweden coordinates the project, with ElectriCITY and KTH as partners. Oleksii Pasichnyi leads the KTH part.
