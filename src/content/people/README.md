@@ -15,9 +15,13 @@ links: # optional
     url: https://scholar.google.com/...
 alumni: false # optional (default false)
 order: 0 # optional, lower comes first (default 0)
+draft: true # optional: keep an unfinished entry off the site (default false)
 ---
 
 Short bio in Markdown.
 ```
 
 A theme ID that does not exist fails the build.
+
+An entry that still holds a `TODO(...)` placeholder must be `draft: true`: publishing
+it, or publishing an entry that refers to a draft, fails the build.

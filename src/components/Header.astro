@@ -1,18 +1,24 @@
 ---
 import { sections } from "../data/sections";
 import { builtPagesFrom, offeredSections } from "../lib/navigation";
+import { getVisible } from "../lib/visible";
 
 // The pages this build contains, as built file paths (see pageToBuiltFile).
 const pages = Object.keys(import.meta.glob("../pages/**/*.{astro,md,html}"));
 const builtPages = builtPagesFrom(
   pages.map((p) => p.replace(/^\.\.\/pages\//, "")),
 );
-const nav = offeredSections(sections, builtPages);
+// Content-backed sections exist only while their collection has something to show.
+const available = new Set<string>();
+for (const name of ["themes", "people", "projects"] as const) {
+  if ((await getVisible(name)).length > 0) available.add(name);
+}
+const nav = offeredSections(sections, builtPages, available);
 ---
 
 <header>
   <a class="logo" href="/">
-    <img src="/logo.svg" alt="Oden Lab" width="230" height="175" />
+    <img src="/logo.svg" alt="OdenLabs" width="230" height="175" />
   </a>
   <nav aria-label="Main">
     <ul>

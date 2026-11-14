@@ -10,6 +10,8 @@ export interface Entry {
   collection: string;
   id: string;
   data: unknown;
+  /** The raw Markdown body, when the loader provides it. */
+  body?: string;
 }
 
 const isRef = (value: unknown): value is Ref =>
@@ -35,14 +37,19 @@ function collectRefs(value: unknown, path: string, out: [string, Ref][]) {
   }
 }
 
+/** Every reference in an entry's data, with its path (`people[0]`). */
+export function refsOf(data: unknown): [string, Ref][] {
+  const refs: [string, Ref][] = [];
+  collectRefs(data, "", refs);
+  return refs;
+}
+
 /** Returns one message per reference that points at a missing entry. */
 export function findDanglingReferences(entries: Entry[]): string[] {
   const known = new Set(entries.map((e) => `${e.collection}/${e.id}`));
   const problems: string[] = [];
   for (const entry of entries) {
-    const refs: [string, Ref][] = [];
-    collectRefs(entry.data, "", refs);
-    for (const [path, ref] of refs) {
+    for (const [path, ref] of refsOf(entry.data)) {
       if (!known.has(`${ref.collection}/${ref.id}`)) {
         problems.push(
           `${entry.collection}/${entry.id} (${path}) → missing ${ref.collection}/${ref.id}`,

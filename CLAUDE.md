@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-Static website for the Oden Lab research group at KTH, built with Astro and deployed
+Static website for the OdenLabs research group at KTH, built with Astro and deployed
 to `oden.abe.kth.se`. English only, one maintainer. Architecture and the reasoning
 behind it: `docs/architecture-map.md` and `docs/adr/`.
 
 ## Commands
 
-- `npm run dev` — local dev server
+- `npm run dev` — local dev server; it also shows `draft: true` content (marked), which a build never does
 - `npm run build` — static build into `dist/`
 - `npm test` — Vitest: unit tests + the build smoke test (`tests/build.test.ts`)
 - `npm run lint` — `astro check` (types + content schema) and `prettier --check .`

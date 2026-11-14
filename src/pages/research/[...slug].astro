@@ -1,0 +1,81 @@
+---
+import { render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import Card from "../../components/Card.astro";
+import DraftBadge from "../../components/DraftBadge.astro";
+import Related from "../../components/Related.astro";
+import { getVisible } from "../../lib/visible";
+
+// The section and its pages exist only while there are themes to show, so a
+// site without finished themes has no empty Research page.
+export async function getStaticPaths() {
+  const themes = await getVisible("themes");
+  if (themes.length === 0) return [];
+  return [
+    { params: { slug: undefined } },
+    ...themes.map((theme) => ({ params: { slug: theme.id } })),
+  ];
+}
+
+const { slug } = Astro.params;
+const themes = (await getVisible("themes")).sort(
+  (a, b) =>
+    a.data.order - b.data.order || a.data.title.localeCompare(b.data.title),
+);
+const theme = slug ? themes.find((t) => t.id === slug) : undefined;
+const Content = theme ? (await render(theme)).Content : undefined;
+
+const uses = (refs: { id: string }[]) =>
+  theme ? refs.some((ref) => ref.id === theme.id) : false;
+const people = (await getVisible("people"))
+  .filter((p) => uses(p.data.themes))
+  .sort((a, b) => a.data.name.localeCompare(b.data.name));
+const projects = (await getVisible("projects"))
+  .filter((p) => uses(p.data.themes))
+  .sort((a, b) => a.data.title.localeCompare(b.data.title));
+---
+
+{theme && Content ? (
+  <Base title={theme.data.title} description={theme.data.summary}>
+    <h1>
+      {theme.data.title} {theme.data.draft && <DraftBadge />}
+    </h1>
+    <p class="lead">{theme.data.summary}</p>
+    <Content />
+    <Related
+      heading="People"
+      items={people.map((p) => ({
+        href: `/people/${p.id}/`,
+        label: p.data.name,
+        draft: p.data.draft,
+      }))}
+    />
+    <Related
+      heading="Projects"
+      items={projects.map((p) => ({
+        href: `/projects/${p.id}/`,
+        label: p.data.title,
+        draft: p.data.draft,
+      }))}
+    />
+  </Base>
+) : (
+  <Base title="Research" description="The research themes of the group.">
+    <h1>Research</h1>
+    {themes.map((t) => (
+      <Card
+        href={`/research/${t.id}/`}
+        title={t.data.title}
+        summary={t.data.summary}
+        draft={t.data.draft}
+      />
+    ))}
+  </Base>
+)}
+
+<style>
+  .lead {
+    font-size: var(--text-lg);
+    color: var(--color-text-muted);
+  }
+</style>

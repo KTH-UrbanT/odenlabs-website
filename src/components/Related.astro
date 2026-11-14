@@ -1,0 +1,32 @@
+---
+import DraftBadge from "./DraftBadge.astro";
+
+interface Props {
+  heading: string;
+  items: { href: string; label: string; draft?: boolean }[];
+}
+
+const { heading, items } = Astro.props;
+---
+
+{items.length > 0 && (
+  <section>
+    <h2>{heading}</h2>
+    <ul>
+      {items.map((item) => (
+        <li>
+          <a href={item.href}>{item.label}</a> {item.draft && <DraftBadge />}
+        </li>
+      ))}
+    </ul>
+  </section>
+)}
+
+<style>
+  h2 {
+    font-size: var(--text-xl);
+  }
+  ul {
+    padding-left: var(--space-6);
+  }
+</style>
