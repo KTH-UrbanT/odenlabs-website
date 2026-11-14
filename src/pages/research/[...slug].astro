@@ -45,7 +45,7 @@ const projects = (await getVisible("projects"))
     <Related
       heading="People"
       items={people.map((p) => ({
-        href: `/people/${p.id}/`,
+        href: `/people/#${p.id}`,
         label: p.data.name,
         draft: p.data.draft,
       }))}

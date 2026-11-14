@@ -1,0 +1,72 @@
+---
+import DraftBadge from "./DraftBadge.astro";
+
+interface Props {
+  /** The entry ID: other pages link to `/people/#id`. */
+  id: string;
+  name: string;
+  role: string;
+  email?: string;
+  links?: { label: string; url: string }[];
+  draft?: boolean;
+}
+
+const { id, name, role, email, links = [], draft = false } = Astro.props;
+---
+
+<article id={id}>
+  <header>
+    <h2>
+      {name} {draft && <DraftBadge />}
+    </h2>
+    <p class="role">{role}</p>
+    {email && (
+      <p>
+        <a href={`mailto:${email}`}>{email}</a>
+      </p>
+    )}
+    {links.length > 0 && (
+      <ul>
+        {links.map((link) => (
+          <li>
+            <a href={link.url}>{link.label}</a>
+          </li>
+        ))}
+      </ul>
+    )}
+  </header>
+  <div class="bio">
+    <slot />
+  </div>
+</article>
+
+<style>
+  article {
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-xl);
+  }
+  p {
+    margin: 0 0 var(--space-2);
+  }
+  .role {
+    color: var(--color-text-muted);
+  }
+  ul {
+    margin: 0;
+    padding-left: var(--space-6);
+  }
+  .bio :global(p:first-child) {
+    margin-top: 0;
+  }
+  @media (min-width: 48rem) {
+    article {
+      display: grid;
+      grid-template-columns: minmax(12rem, 16rem) 1fr;
+      gap: var(--space-8);
+    }
+  }
+</style>
