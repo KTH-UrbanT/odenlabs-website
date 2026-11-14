@@ -4,6 +4,7 @@ import Base from "../../layouts/Base.astro";
 import Card from "../../components/Card.astro";
 import DraftBadge from "../../components/DraftBadge.astro";
 import Related from "../../components/Related.astro";
+import { compareBySurname } from "../../lib/people";
 import { getVisible } from "../../lib/visible";
 
 // The section and its pages exist only while there are themes to show, so a
@@ -29,7 +30,7 @@ const uses = (refs: { id: string }[]) =>
   theme ? refs.some((ref) => ref.id === theme.id) : false;
 const people = (await getVisible("people"))
   .filter((p) => uses(p.data.themes))
-  .sort((a, b) => a.data.name.localeCompare(b.data.name));
+  .sort((a, b) => compareBySurname(a.data.name, b.data.name));
 const projects = (await getVisible("projects"))
   .filter((p) => uses(p.data.themes))
   .sort((a, b) => a.data.title.localeCompare(b.data.title));

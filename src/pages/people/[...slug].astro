@@ -2,6 +2,7 @@
 import { render } from "astro:content";
 import Base from "../../layouts/Base.astro";
 import Person from "../../components/Person.astro";
+import { compareBySurname } from "../../lib/people";
 import { getVisible } from "../../lib/visible";
 
 // One page, no profile pages: each person's bio sits next to the name. The
@@ -15,7 +16,8 @@ const people = await Promise.all(
   (await getVisible("people"))
     .sort(
       (a, b) =>
-        a.data.order - b.data.order || a.data.name.localeCompare(b.data.name),
+        a.data.order - b.data.order ||
+        compareBySurname(a.data.name, b.data.name),
     )
     .map(async (person) => ({
       person,

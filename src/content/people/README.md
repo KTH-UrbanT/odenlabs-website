@@ -15,7 +15,7 @@ links: # optional
   - label: Google Scholar
     url: https://scholar.google.com/...
 alumni: false # optional (default false)
-order: 0 # optional, lower comes first (default 0)
+order: 0 # optional, lower comes first (default 0); people with the same order are listed by surname
 draft: true # optional: keep an unfinished entry off the site (default false)
 ---
 
