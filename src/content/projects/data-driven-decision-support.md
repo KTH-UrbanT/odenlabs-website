@@ -7,4 +7,4 @@ funder: Swedish Energy Agency
 url: https://liu.se/en/research/graduate-school-in-energy-systems/data-driven-decision-support-and-energy-models
 ---
 
-The project is part of the Graduate School in Energy Systems and combines IT, engineering, energy modelling and social science.
+The project started in 2022 as part of the Graduate School in Energy Systems (FoES) and combines IT, engineering, energy modelling and social science.
