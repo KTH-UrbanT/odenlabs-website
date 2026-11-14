@@ -5,4 +5,6 @@ themes: [urban-transition-governance]
 people: [kateryna-pereverza]
 funder: Formas
 url: https://www.skellefteasciencecity.se/en/projekt/climate-neutral-and-inclusive-communities-skelleftea/
+start: 2022-01-01
+end: 2024-12-31
 ---

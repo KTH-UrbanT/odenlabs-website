@@ -5,6 +5,8 @@ themes: [urban-data-digital-twins]
 people: [shadaab-ghani]
 funder: ICLEI Action Fund 2.0
 url: https://www.kth.se/profile/annehak/page/digicityclimate-project
+start: 2023-05-01
+end: 2025-06-30
 ---
 
 Partners: City of Stockholm, ElectriCITY and KTH.

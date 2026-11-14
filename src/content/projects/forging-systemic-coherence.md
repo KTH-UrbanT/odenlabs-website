@@ -5,5 +5,3 @@ themes: [urban-transition-governance]
 funder: Formas
 draft: true
 ---
-
-TODO(maintainer): project description, people, URL if any.
