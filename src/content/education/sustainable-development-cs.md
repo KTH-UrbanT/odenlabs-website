@@ -3,7 +3,6 @@ title: Sustainable Development for Computer Science and Engineering
 kind: course
 code: AL1504
 summary: Bachelor's course on how computing and IT can both support and work against sustainable development, from single components to whole systems.
-people: [oleksii-pasichnyi, olena-tatarchenko]
 url: https://www.kth.se/student/kurser/kurs/AL1504?l=en
 ---
 
