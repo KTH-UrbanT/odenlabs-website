@@ -9,5 +9,3 @@ We build a simple energy model for each building, based on its walls, windows, h
 The models are used to answer "what if?" questions: the effect of renovations, added insulation or a warmer climate on energy use and cost. The same city-scale approach is used to estimate the potential for solar PV on buildings.
 
 Our open-source framework MUBES is available on GitHub: https://github.com/KTH-UrbanT/MUBES_UBEM
-
-An interactive map of building energy performance in Stockholm is available at https://oden.urbant.org.
