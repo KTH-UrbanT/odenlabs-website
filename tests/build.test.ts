@@ -34,6 +34,15 @@ beforeAll(() => {
 });
 
 describe("astro build", () => {
+  it("ships no unfinished placeholder text", () => {
+    const leaks = builtFiles().filter(
+      (f) =>
+        /\.(html|xml|txt|json|svg|css|js)$/.test(f) &&
+        /TODO\(/.test(readFileSync(join(dist, f), "utf8")),
+    );
+    expect(leaks).toEqual([]);
+  });
+
   it("produces dist/index.html", () => {
     expect(existsSync("dist/index.html")).toBe(true);
     expect(html("index.html")).toContain("<main");

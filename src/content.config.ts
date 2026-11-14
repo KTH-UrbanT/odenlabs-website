@@ -4,6 +4,8 @@ import { z } from "astro/zod";
 
 // One Markdown file per entry; the file name (kebab-case) is the entry ID.
 // README.md in each folder documents the fields and is not an entry.
+// `draft: true` keeps an unfinished entry off the site (src/lib/drafts.ts).
+const draft = z.boolean().default(false);
 const entries = (folder: string) =>
   glob({
     pattern: ["**/*.md", "!**/README.md"],
@@ -16,6 +18,7 @@ const themes = defineCollection({
     title: z.string(),
     summary: z.string(),
     order: z.number().int().default(0),
+    draft,
   }),
 });
 
@@ -31,6 +34,7 @@ const people = defineCollection({
       links: z.array(z.object({ label: z.string(), url: z.url() })).default([]),
       alumni: z.boolean().default(false),
       order: z.number().int().default(0),
+      draft,
     }),
 });
 
@@ -45,6 +49,7 @@ const projects = defineCollection({
     start: z.coerce.date().optional(),
     end: z.coerce.date().optional(),
     url: z.url().optional(),
+    draft,
   }),
 });
 
