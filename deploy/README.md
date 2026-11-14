@@ -125,5 +125,12 @@ Deletion stays off until step 4. Do the steps in order.
    `removal-limit`, the report lists the difference. Re-check the step-1
    settings in the same change.
 
+5. **Empty `approved-removals.txt`** in a reviewed pull request once the
+   cleanup run succeeded. The list is one-off: an approved address that the
+   site later builds (for example `people/index.html`) stops every publish
+   with `approved-in-build`, and the post-publish check fails on any approved
+   address that answers, even when another service on the same host serves it.
+   Add paths again only for a reviewed removal, and empty it afterwards.
+
 To return to upload-and-list at any time, set `"deletion": "off"` in a
 reviewed pull request.
