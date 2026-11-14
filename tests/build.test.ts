@@ -91,11 +91,12 @@ function offeredLinks(page: string): { label: string; href: string }[] {
 
 // Read straight from the content files, not through the helpers the site uses,
 // so the site cannot pass by agreeing with itself.
-type Collection = "themes" | "people" | "projects";
+type Collection = "themes" | "people" | "projects" | "education";
 const route: Record<Collection, string> = {
   themes: "research",
   people: "people",
   projects: "projects",
+  education: "education",
 };
 function contentEntries(collection: Collection) {
   const dir = `src/content/${collection}`;
@@ -128,8 +129,8 @@ describe("drafts stay out of the build", () => {
       );
       for (const e of published) {
         expect(existsSync(join(dist, route[c], e.id, "index.html"))).toBe(
-          // People have no pages of their own: the bio sits on the list.
-          c !== "people",
+          // People and education entries have no pages of their own: they sit on the list.
+          c !== "people" && c !== "education",
         );
       }
     }
@@ -184,7 +185,7 @@ describe("header navigation with real section pages (AC-03)", () => {
       cpSync(entry, join(root, entry), { recursive: true });
     }
     symlinkSync(resolve("node_modules"), join(root, "node_modules"), "dir");
-    for (const collection of ["themes", "people", "projects"]) {
+    for (const collection of ["themes", "people", "projects", "education"]) {
       const dir = join(root, "src/content", collection);
       for (const file of readdirSync(dir)) {
         if (file.endsWith(".md") && file !== "README.md") {

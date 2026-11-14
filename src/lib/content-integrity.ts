@@ -15,6 +15,7 @@ export function assertContentIntegrity(): Promise<void> {
         getCollection("themes"),
         getCollection("people"),
         getCollection("projects"),
+        getCollection("education"),
       ])
     ).flat();
     const dangling = findDanglingReferences(entries);

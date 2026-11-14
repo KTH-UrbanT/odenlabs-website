@@ -1,0 +1,104 @@
+---
+import { render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import DraftBadge from "../../components/DraftBadge.astro";
+import { compareBySurname } from "../../lib/people";
+import { getVisible } from "../../lib/visible";
+
+// One page, no detail pages: each entry's text sits under its title. The page
+// exists only while there is something to show.
+export async function getStaticPaths() {
+  const entries = await getVisible("education");
+  return entries.length === 0 ? [] : [{ params: { slug: undefined } }];
+}
+
+const kinds = [
+  { kind: "course", heading: "Courses" },
+  { kind: "programme", heading: "Programmes" },
+  { kind: "handbook", heading: "Handbooks" },
+] as const;
+
+const entries = await getVisible("education");
+const people = await getVisible("people");
+const groups = await Promise.all(
+  kinds.map(async ({ kind, heading }) => ({
+    heading,
+    items: await Promise.all(
+      entries
+        .filter((e) => e.data.kind === kind)
+        .sort(
+          (a, b) =>
+            a.data.order - b.data.order ||
+            a.data.title.localeCompare(b.data.title),
+        )
+        .map(async (entry) => ({
+          entry,
+          Content: (await render(entry)).Content,
+          teachers: people
+            .filter((p) => entry.data.people.some((ref) => ref.id === p.id))
+            .sort((a, b) => compareBySurname(a.data.name, b.data.name)),
+        })),
+    ),
+  })),
+);
+---
+
+<Base
+  title="Education"
+  description="Courses, programmes and teaching material of the group."
+>
+  <h1>Education</h1>
+  {groups
+    .filter((g) => g.items.length > 0)
+    .map((group) => (
+      <section>
+        <h2>{group.heading}</h2>
+        {group.items.map(({ entry, Content, teachers }) => (
+          <article id={entry.id}>
+            <h3>
+              {entry.data.url ? (
+                <a href={entry.data.url}>{entry.data.title}</a>
+              ) : (
+                entry.data.title
+              )}{" "}
+              {entry.data.draft && <DraftBadge />}
+            </h3>
+            {entry.data.code && <p class="meta">{entry.data.code}</p>}
+            <p>{entry.data.summary}</p>
+            <Content />
+            {teachers.length > 0 && (
+              <p class="meta">
+                {teachers.map((p, i) => (
+                  <>
+                    {i > 0 && ", "}
+                    <a href={`/people/#${p.id}`}>{p.data.name}</a>
+                  </>
+                ))}
+              </p>
+            )}
+          </article>
+        ))}
+      </section>
+    ))}
+</Base>
+
+<style>
+  section {
+    margin-top: var(--space-8);
+  }
+  article {
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  h3 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-xl);
+  }
+  p {
+    margin: 0 0 var(--space-2);
+  }
+  .meta {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+</style>

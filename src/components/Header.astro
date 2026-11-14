@@ -10,7 +10,7 @@ const builtPages = builtPagesFrom(
 );
 // Content-backed sections exist only while their collection has something to show.
 const available = new Set<string>();
-for (const name of ["themes", "people", "projects"] as const) {
+for (const name of ["themes", "people", "projects", "education"] as const) {
   if ((await getVisible(name)).length > 0) available.add(name);
 }
 const nav = offeredSections(sections, builtPages, available);

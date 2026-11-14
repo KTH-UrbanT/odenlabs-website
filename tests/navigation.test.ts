@@ -133,10 +133,11 @@ describe("missingPlannedPages", () => {
 });
 
 describe("the planned sections list", () => {
-  it("holds Research, People and Join/Contact in planned order", () => {
+  it("holds Research, People, Education and Join/Contact in planned order", () => {
     expect(sections.map((s) => s.label)).toEqual([
       "Research",
       "People",
+      "Education",
       "Join/Contact",
     ]);
   });

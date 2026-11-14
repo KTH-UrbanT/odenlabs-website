@@ -9,11 +9,12 @@ export interface Section {
    * make the section exist. Its pages are generated only when there is
    * something to show, so the header offers the section on the same rule.
    */
-  requires?: "themes" | "people" | "projects";
+  requires?: "themes" | "people" | "projects" | "education";
 }
 
 export const sections: readonly Section[] = [
   { label: "Research", href: "/research/", requires: "themes" },
   { label: "People", href: "/people/", requires: "people" },
+  { label: "Education", href: "/education/", requires: "education" },
   { label: "Join/Contact", href: "/join/" },
 ];
