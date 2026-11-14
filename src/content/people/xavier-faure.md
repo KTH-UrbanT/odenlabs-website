@@ -1,7 +1,6 @@
 ---
 name: Xavier Faure
 role: Researcher
-themes: [urban-building-energy-modelling]
 alumni: true
 links:
   - label: LinkedIn

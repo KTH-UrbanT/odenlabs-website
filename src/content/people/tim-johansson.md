@@ -1,7 +1,6 @@
 ---
 name: Tim Johansson
 role: Researcher
-themes: [urban-building-energy-modelling]
 alumni: true
 links:
   - label: RISE profile

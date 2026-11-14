@@ -1,5 +1,5 @@
 ---
-name: Zelal Agdal
+name: Zelal Irem Aldag Bozkurt
 role: MSc student
 alumni: true
 ---

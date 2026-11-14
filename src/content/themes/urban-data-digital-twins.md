@@ -7,3 +7,5 @@ order: 4
 We collect and connect data on materials, energy use, people and infrastructure to describe how a city has changed, how it works now and how it might develop. For Stockholm this includes property maps, point clouds and building registers (Lantmäteriet), energy performance certificates (Boverket), 3D models (City of Stockholm), metered heat use and district heating coverage (Stockholm Exergi), and climate data (SMHI).
 
 On top of this data we build tools for different users, such as interactive dashboards for building portfolios and conversational AI for property owners.
+
+An interactive map of building energy performance in Stockholm is available at https://oden.urbant.org.

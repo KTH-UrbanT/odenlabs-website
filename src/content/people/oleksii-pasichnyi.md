@@ -19,4 +19,4 @@ Oleksii works on urban data analytics for energy transitions: urban building ene
 
 He received his PhD in Industrial Ecology from KTH in 2020 with a thesis on data-driven strategic planning for citywide building retrofitting. Before KTH he was a lecturer at Kyiv Polytechnic Institute and deputy director of its World Data Centre for Geoinformatics and Sustainable Development.
 
-He coordinates the KTH courses Smart Cities and Climate Mitigation Strategies (MJ2685) and Sustainable Development for Computer Science and Engineering (AL1504), is KTH coordinator of the strategic research area STandUP for Energy, and is a member of the Swedish Standards committee SEK SK3 on smart sustainable cities.
+He coordinates the KTH courses Smart Cities and Climate Mitigation Strategies (MJ2685) and Sustainable Development for Computer Science and Engineering (AL1504), is KTH coordinator of the strategic research area [STandUP for Energy](https://www.standupforenergy.se), and is a member of the Swedish Standards committee SEK SK3 on smart sustainable cities.

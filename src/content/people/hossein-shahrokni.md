@@ -1,12 +1,15 @@
 ---
 name: Hossein Shahrokni
 role: Researcher
-themes: [urban-data-digital-twins, urban-building-energy-modelling]
+themes: [urban-data-digital-twins]
 email: hosseins@kth.se
+links:
+  - label: LocalLife
+    url: https://locallife.se
 order: 2
 ---
 
-Hossein is a researcher and docent in Industrial Ecology. He developed the Smart Urban Metabolism framework, which uses high-resolution data to monitor and analyse energy and material flows in cities. His work covers urban building energy modelling, big data analytics of building stocks, and AI methods for urban energy, including retrieval-augmented generation and agentic systems.
+Hossein is a researcher and docent in Industrial Ecology. He developed the Smart Urban Metabolism framework, which uses high-resolution data to monitor and analyse energy and material flows in cities. His work covers big data analytics of building stocks and AI methods for urban energy, including retrieval-augmented generation and agentic systems.
 
 He led the Smart City Stockholm Royal Seaport project, which integrated more than 130 million data points from 15,000 buildings in Stockholm, and led the founding of the National Urban Energy Data Lab (NUE Data Lab). He co-authored the foundation of the Viable Cities strategic innovation programme.
 
