@@ -1,6 +1,6 @@
 ---
 status: living
-updated_at: "2026-10-05"
+updated_at: "2026-11-15"
 ---
 
 # Roadmap — odenlabs-website
@@ -19,14 +19,14 @@ A small English-only site with the research group's own identity is live at KTH,
 
 | # | Step | Source | Size | Status |
 |---|---|---|:---:|---|
-| 1 | Set the group's identity on the new skeleton (restyle logo and theme; skeleton itself comes from `/sdd:scaffold`); also removes the starter from the live server (cleanup half of step 8) and ships a minimal who-we-are front page (slice of step 2) | idea-brief.md §1 Raw idea; §8 Open questions | M | partly shipped (AC-05 identity, AC-15 front-page copy wait on maintainer) → [`features/clean-starter/`](features/clean-starter/) |
+| 1 | Set the group's identity on the new skeleton (restyle logo and theme; skeleton itself comes from `/sdd:scaffold`); also removes the starter from the live server (cleanup half of step 8) and ships a minimal who-we-are front page (slice of step 2) | idea-brief.md §1 Raw idea; §8 Open questions | M | partly shipped (AC-15 front-page copy done 2026-11-15; AC-05 identity waits on maintainer: fonts and sign-off) → [`features/clean-starter/`](features/clean-starter/) |
 | 2 | Front page "who we are" with equal paths to Research, People and Join/Contact | idea-brief.md §7 Recommendation | M | idea |
 | 3 | People pages: members and bios | idea-brief.md §7 Recommendation | M | idea |
 | 4 | Join / Contact page | idea-brief.md §7 Recommendation | S | idea |
 | 5 | Research themes as the site's spine → see [Not yet specified](#not-yet-specified) | idea-brief.md §7 Recommendation | fog | idea |
 | 6 | Projects pages grouped under each theme | idea-brief.md §7 Recommendation | M | idea |
 | 7 | Automatic publications import → see [Not yet specified](#not-yet-specified) | idea-brief.md §6 Risks | fog | idea |
-| 8 | Go live at KTH: confirm the deploy to oden.abe.kth.se (self-hosted runner, `clean-starter`) serves the real site (starter removal now lives in step 1 / `clean-starter`; what remains is the final-domain check, D3) | idea-brief.md §6 Risks | S | idea |
+| 8 | Go live at KTH: confirm the deploy to oden.abe.kth.se (self-hosted runner, `clean-starter`) serves the real site (starter removal now lives in step 1 / `clean-starter`; what remains is confirming the live site; the domain is final, D3 decided) | idea-brief.md §6 Risks | S | idea |
 
 ## Not yet specified
 
@@ -49,7 +49,6 @@ A small English-only site with the research group's own identity is live at KTH,
 |---|---|:---:|:---:|:---:|
 | D1 | Which 3–5 research themes define the group? | grilling | human | 5 |
 | D2 | Which source feeds publications, and is its data good enough? | research | agent | 7 |
-| D3 | Who owns the KTH virtual server, and is oden.abe.kth.se the final domain? | grilling | human | 8 |
 | D4 | Where does the first batch of real content (bios, photos) come from, given members must supply some? | grilling | human | 3 |
 
 ## Decisions so far
@@ -58,6 +57,7 @@ A small English-only site with the research group's own identity is live at KTH,
 - Blog, second language, member editing, internal area and full KTH branding are out → [`idea-brief.md §5`](idea-brief.md)
 - Site is rebuilt on Astro (static), content as typed files in git, plain CSS tokens; HugoBlox starter removed by `/sdd:scaffold` (D6, 2026-10-04) → [`architecture-map.md`](architecture-map.md), [`adr/`](adr/)
 - Logo and blue theme are restyled, not replaced (D5, 2026-10-04)
+- KTH owns the infrastructure, Oleksii is its manager, and oden.abe.kth.se is the final domain (D3, 2026-11-15)
 - Hosting is oden.abe.kth.se via GitHub Actions SSH copy, all four secrets set; recon done → [`.github/workflows/publish.yaml`](../.github/workflows/publish.yaml), [`config/_default/hugo.yaml`](../config/_default/hugo.yaml)
 
 ## Dependency graph

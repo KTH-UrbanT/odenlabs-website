@@ -16,7 +16,7 @@ Deletion ships **off**. See [spec](docs/features/clean-starter/spec.md) and the
 - AC-11 / AC-11b — protected files are never touched; a clash stops the publish ✓
 - AC-12 / AC-13 / AC-13b — unsafe plans stop before any change; unknown files are kept and reported ✓
 - AC-14 — no starter files or licence remain ✓
-- **Not met:** AC-05 (identity sign-off) and AC-15 (front-page copy), blocked on the maintainer (spec §8, T5–T7)
+- **Not met:** AC-05 (identity sign-off), blocked on the maintainer (spec §8, T6–T7). AC-15 (front-page copy) was met later, on 2026-11-15
 
 ## Design
 
