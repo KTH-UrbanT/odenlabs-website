@@ -60,7 +60,15 @@ const nav = offeredSections(sections, builtPages, available);
   }
 
   nav a {
-    font-weight: var(--weight-bold);
+    font-weight: var(--weight-semibold);
+    color: var(--color-heading);
     text-decoration: none;
+  }
+
+  nav a:hover {
+    color: var(--color-link);
+    text-decoration: underline;
+    text-decoration-thickness: var(--rule-width);
+    text-underline-offset: 0.35em;
   }
 </style>

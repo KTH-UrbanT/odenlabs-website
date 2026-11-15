@@ -26,6 +26,13 @@ const fullTitle = title === siteName ? title : `${title} · ${siteName}`;
     <title>{fullTitle}</title>
     {description && <meta name="description" content={description} />}
     <link rel="icon" type="image/png" href="/icon.png" />
+    <link
+      rel="preload"
+      href="/fonts/figtree-latin-wght-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     {noindex ? (
       <meta name="robots" content="noindex" />
     ) : (

@@ -3,7 +3,7 @@ status: Living
 tool: figma
 figma_file: "https://www.figma.com/design/Rei8HZjvQBbVk5zfxjF23h"
 pen_file: ""
-updated_at: "2026-10-04"
+updated_at: "2026-11-15"
 ---
 
 # Design system — odenlabs-website
@@ -40,15 +40,22 @@ updated_at: "2026-10-04"
 it; they never lead it. A screen never declares a raw value inline. To restyle (roadmap D5),
 edit this file.
 
-- **Colors:** `src/styles/tokens.css:8-45` holds the brand navy/grey (`--color-brand`,
-  `--color-brand-muted`), the blue primary and cyan secondary scales (50–950), and the semantic
-  roles (`--color-bg`, `--color-surface`, `--color-text`, `--color-text-muted`, `--color-link`,
-  `--color-link-hover`, `--color-border`).
-- **Spacing / sizing:** `src/styles/tokens.css:63-75` holds `--space-1` … `--space-16`,
-  `--content-width` and `--radius`.
-- **Typography:** `src/styles/tokens.css:47-61` holds `--font-sans`, `--font-mono`, the
-  `--text-sm` … `--text-3xl` scale, the leading values and the weights. Global element defaults
-  (headings in brand navy, link colors) live in `src/styles/global.css:32-45`.
+- **Identity (AC-05, direction A, chosen 2026-11-15):** KTH’s graphic profile carried by colour
+  and type, with the group’s own layout (no side menu, breadcrumbs or grey boxes of the KTH
+  site). The logo navy `#004790` matches KTH-blå `#004791`, so the KTH palette fits the
+  unchanged logo. KTH’s line pattern and crest are not used.
+- **Colors:** the brand block in `src/styles/tokens.css` holds the logo navy and grey, KTH
+  Marinblå, Sand, Bruten vit and Bruten svart. The semantic roles (`--color-bg` = Sand,
+  `--color-surface`, `--color-text`, `--color-text-muted`, `--color-heading`, `--color-link`,
+  `--color-link-hover`, `--color-border`, `--color-rule`) are the only names components use.
+  Every text/background pair is declared in `src/styles/contrast-pairs.ts`.
+- **Spacing / sizing:** `--space-1` … `--space-16`, `--content-width`, `--measure` (line length
+  for long text) and `--radius`.
+- **Typography:** KTH’s pair. Figtree (`--font-sans`, self-hosted Latin variable WOFF2, about
+  20 KB, OFL, in `public/fonts/`) for headings, navigation and short text; Georgia
+  (`--font-serif`, a system font) for reading text in `<main>`. Arial is KTH’s fallback for
+  Figtree. Page titles use `--text-display` at weight 800 in Marinblå. Global element defaults
+  live in `src/styles/global.css`.
 
 ## Component inventory
 
