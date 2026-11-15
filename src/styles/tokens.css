@@ -1,53 +1,36 @@
 /*
  * Design tokens — the only place raw values live.
  * Components and pages use these custom properties, never raw colours.
- * Seeded from the existing identity: logo navy/grey (logo.svg) and the
- * blue/cyan scales of the previous theme. Restyling = editing this file.
+ * Identity (AC-05, direction A, 2026-11-15): KTH's graphic profile carried by
+ * colour and type, with the group's own layout. The logo navy (#004790) is
+ * KTH-blå (#004791) to the eye, so the KTH palette fits the unchanged logo.
+ * Restyling = editing this file.
  */
 :root {
-  /* Brand (from logo.svg) */
-  --color-brand: #004790;
-  --color-brand-muted: #666666;
-
-  /* Primary scale (blue) */
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-200: #bfdbfe;
-  --color-primary-300: #93c5fd;
-  --color-primary-400: #60a5fa;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-primary-800: #1e40af;
-  --color-primary-900: #1e3a8a;
-  --color-primary-950: #172554;
-
-  /* Secondary scale (cyan) */
-  --color-secondary-50: #ecfeff;
-  --color-secondary-100: #cffafe;
-  --color-secondary-200: #a5f3fc;
-  --color-secondary-300: #67e8f9;
-  --color-secondary-400: #22d3ee;
-  --color-secondary-500: #06b6d4;
-  --color-secondary-600: #0891b2;
-  --color-secondary-700: #0e7490;
-  --color-secondary-800: #155e75;
-  --color-secondary-900: #164e63;
-  --color-secondary-950: #083344;
+  /* Brand */
+  --color-brand: #004790; /* logo navy = KTH-blå */
+  --color-brand-dark: #000061; /* KTH Marinblå */
+  --color-brand-muted: #666666; /* logo grey */
+  --color-sand: #ebe5e0; /* KTH Sand */
+  --color-sand-dark: #d6cdc5; /* hairlines on sand, derived from Sand */
+  --color-off-white: #fcfcfc; /* KTH Bruten vit */
+  --color-off-black: #212121; /* KTH Bruten svart */
 
   /* Semantic roles */
-  --color-bg: #ffffff;
-  --color-surface: var(--color-primary-50);
-  --color-text: #1a1a1a;
-  --color-text-muted: var(--color-brand-muted);
+  --color-bg: var(--color-sand);
+  --color-surface: var(--color-off-white);
+  --color-text: var(--color-off-black);
+  --color-text-muted: #555555; /* logo grey darkened to read on sand */
+  --color-heading: var(--color-brand-dark);
   --color-link: var(--color-brand);
-  --color-link-hover: var(--color-primary-700);
-  --color-border: #e5e7eb;
+  --color-link-hover: var(--color-brand-dark);
+  --color-border: var(--color-sand-dark);
+  --color-rule: var(--color-brand);
 
-  /* Typography */
-  --font-sans:
-    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
+  /* Typography: KTH pairs Figtree (headings, short text) with Georgia (long text);
+     Arial is KTH's own fallback for Figtree. */
+  --font-sans: "Figtree", Arial, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -55,10 +38,15 @@
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
   --text-3xl: 2rem;
-  --leading-tight: 1.25;
+  --text-display: clamp(2.25rem, 1.5rem + 3.5vw, 3.75rem);
+  --leading-display: 1.05;
+  --leading-tight: 1.15;
   --leading-normal: 1.6;
   --weight-normal: 400;
+  --weight-semibold: 600;
   --weight-bold: 700;
+  --weight-black: 800;
+  --rule-width: 3px;
 
   /* Spacing */
   --space-1: 0.25rem;
@@ -72,5 +60,6 @@
 
   /* Layout */
   --content-width: 64rem;
+  --measure: 38rem; /* comfortable line length for long text */
   --radius: 0.375rem;
 }
