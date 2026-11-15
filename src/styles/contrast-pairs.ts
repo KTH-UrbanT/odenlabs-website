@@ -37,8 +37,20 @@ export const contrastPairs: readonly ContrastPair[] = [
   },
   {
     name: "heading on page",
-    text: "--color-brand",
+    text: "--color-heading",
     background: "--color-bg",
     size: "large",
+  },
+  {
+    name: "navigation link on page",
+    text: "--color-heading",
+    background: "--color-bg",
+    size: "body",
+  },
+  {
+    name: "section rule on page",
+    text: "--color-rule",
+    background: "--color-bg",
+    size: "ui",
   },
 ];

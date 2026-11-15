@@ -19,7 +19,7 @@ A small English-only site with the research group's own identity is live at KTH,
 
 | # | Step | Source | Size | Status |
 |---|---|---|:---:|---|
-| 1 | Set the group's identity on the new skeleton (restyle logo and theme; skeleton itself comes from `/sdd:scaffold`); also removes the starter from the live server (cleanup half of step 8) and ships a minimal who-we-are front page (slice of step 2) | idea-brief.md §1 Raw idea; §8 Open questions | M | partly shipped (AC-15 front-page copy done 2026-11-15; AC-05 identity waits on maintainer: fonts and sign-off) → [`features/clean-starter/`](features/clean-starter/) |
+| 1 | Set the group's identity on the new skeleton (restyle logo and theme; skeleton itself comes from `/sdd:scaffold`); also removes the starter from the live server (cleanup half of step 8) and ships a minimal who-we-are front page (slice of step 2) | idea-brief.md §1 Raw idea; §8 Open questions | M | done on branch, ships with PR #23 (AC-15 front-page copy and AC-05 identity, both 2026-11-15); T7 font-budget guard still open → [`features/clean-starter/`](features/clean-starter/) |
 | 2 | Front page "who we are" with equal paths to Research, People and Join/Contact | idea-brief.md §7 Recommendation | M | idea |
 | 3 | People pages: members and bios | idea-brief.md §7 Recommendation | M | idea |
 | 4 | Join / Contact page | idea-brief.md §7 Recommendation | S | idea |

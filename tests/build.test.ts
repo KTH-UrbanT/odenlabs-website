@@ -250,3 +250,21 @@ describe("third-party requests (spec §6 NFR)", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+describe("project gallery images", () => {
+  it("gives every image in the gallery and on project pages a description", () => {
+    const pages = ["projects/index.html"];
+    const dir = join(dist, "projects");
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) pages.push(`projects/${entry.name}/index.html`);
+    }
+    const bare = pages.flatMap((page) => {
+      const main = /<main[\s\S]*?<\/main>/.exec(html(page))?.[0] ?? "";
+      return [...main.matchAll(/<img\b[^>]*>/g)]
+        .map(([tag]) => tag)
+        .filter((tag) => !/\balt="[^"]+"/.test(tag))
+        .map((tag) => `${page}: ${tag}`);
+    });
+    expect(bare).toEqual([]);
+  });
+});

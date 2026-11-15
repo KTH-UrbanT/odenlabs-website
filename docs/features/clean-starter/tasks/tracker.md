@@ -10,8 +10,8 @@
 | T3  | Header renders only offered sections                                                          | ui     | pasichnyi | S        | T1                  | done    |
 | T4  | Not-found page                                                                                | ui     | pasichnyi | S        | —                   | done    |
 | T5  | Minimal front page                                                                            | ui     | pasichnyi | S        | — (maintainer copy) | done    |
-| T6  | Identity: palette, type, fonts, sign-off                                                      | ui     | pasichnyi | M        | T2, T4, T5          | blocked |
-| T7  | Build guard: font budget (off-site half split to T17)                                         | tests  | pasichnyi | S        | T6                  | blocked |
+| T6  | Identity: palette, type, fonts, sign-off                                                      | ui     | pasichnyi | M        | T2, T4, T5          | done    |
+| T7  | Build guard: font budget (off-site half split to T17)                                         | tests  | pasichnyi | S        | T6                  | todo    |
 | T8  | Publish model + rules files                                                                   | domain | pasichnyi | M        | —                   | done    |
 | T9  | Planner classification and plan                                                               | domain | pasichnyi | M        | T8                  | done    |
 | T10 | Planner stop-guards                                                                           | domain | pasichnyi | M        | T9                  | done    |
@@ -49,8 +49,7 @@
 
 **Total:** 41 tasks, ~19.4 person-days (S ≈ 0.3 d, M ≈ 0.7 d, 1d = 1 d).
 
-**Blocked (2026-10-04):** T6 waits for the maintainer's font choice and
-before/after sign-off. T5 (front-page copy) was unblocked and done by 2026-11-15. T7 waits for T6.
+**Unblocked (2026-11-15):** T5 (front-page copy) and T6 (identity, signed off by the maintainer) are done. T7 (font-budget guard) can start.
 
 **Review follow-ups (2026-10-04):** T16–T23 done; deferrals and new due dates in spec §8.
 

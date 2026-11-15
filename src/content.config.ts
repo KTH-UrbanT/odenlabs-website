@@ -40,17 +40,27 @@ const people = defineCollection({
 
 const projects = defineCollection({
   loader: entries("projects"),
-  schema: z.object({
-    title: z.string(),
-    summary: z.string(),
-    themes: z.array(reference("themes")).min(1),
-    people: z.array(reference("people")).default([]),
-    funder: z.string().optional(),
-    start: z.coerce.date().optional(),
-    end: z.coerce.date().optional(),
-    url: z.url().optional(),
-    draft,
-  }),
+  schema: ({ image }) =>
+    z
+      .object({
+        title: z.string(),
+        summary: z.string(),
+        themes: z.array(reference("themes")).min(1),
+        people: z.array(reference("people")).default([]),
+        funder: z.string().optional(),
+        start: z.coerce.date().optional(),
+        end: z.coerce.date().optional(),
+        url: z.url().optional(),
+        // The thumbnail in the project gallery, with a description for readers
+        // who cannot see it.
+        image: image().optional(),
+        imageAlt: z.string().trim().min(1).optional(),
+        draft,
+      })
+      .refine((p) => p.image === undefined || p.imageAlt !== undefined, {
+        path: ["imageAlt"],
+        message: "imageAlt is required when image is set",
+      }),
 });
 
 const education = defineCollection({

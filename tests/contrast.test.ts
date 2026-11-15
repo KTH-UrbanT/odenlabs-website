@@ -197,6 +197,8 @@ describe("the site's declared pairs", () => {
       "hovered link on page",
       "body text on surface",
       "heading on page",
+      "navigation link on page",
+      "section rule on page",
     ]);
   });
 });
