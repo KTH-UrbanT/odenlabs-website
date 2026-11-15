@@ -71,7 +71,8 @@ const education = defineCollection({
     kind: z.enum(["course", "programme", "handbook"]),
     code: z.string().optional(),
     people: z.array(reference("people")).default([]),
-    url: z.url().optional(),
+    // An external page, or a file on this site (a path starting with "/").
+    url: z.union([z.url(), z.string().regex(/^\/[^/]/)]).optional(),
     order: z.number().int().default(0),
     draft,
   }),

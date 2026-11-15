@@ -11,7 +11,7 @@ title: Smart Cities and Climate Mitigation Strategies # required
 summary: One or two sentences. # required
 kind: course # required: course, programme or handbook
 code: MJ2685 / MJ2686 # optional, the course code
-url: https://example.org # optional, external page
+url: https://example.org # optional: external page, or a file on this site such as /files/x.pdf
 order: 0 # optional, lower comes first (default 0); then by title
 draft: true # optional: keep an unfinished entry off the site (default false)
 ---

@@ -37,8 +37,6 @@ removed or left behind is a GPG-encrypted artifact ([ADR-0004](./adr/0004-delive
   but two top-level files; it succeeded after the server folder was made group-writable.
 
 **Acceptance criteria delivered:** AC-01, AC-02, AC-03, AC-04, AC-06, AC-07, AC-07b, AC-08–AC-11b, AC-12,
-AC-13, AC-13b, AC-14.
+AC-13, AC-13b, AC-14, AC-15 (front-page copy published later, 2026-11-15).
 
-**Not delivered (deferred, waiting on the maintainer):** AC-05 (identity: palette, fonts, sign-off) and
-AC-15 (front-page copy), tasks T5–T7, see spec §8. Until then the site keeps the inherited tokens and a
-minimal front page. Other deferrals (R3-05, R-05 to R-09, R6-01, R6-03, R6-04) have owners and due dates in §8.
+**Not delivered (deferred, waiting on the maintainer):** AC-05 (identity: palette, fonts, sign-off), tasks T6–T7, see spec §8. Until then the site keeps the inherited tokens. Other deferrals (R3-05, R-05 to R-09, R6-01, R6-03, R6-04) have owners and due dates in §8.
