@@ -5,7 +5,7 @@ themes: [urban-transition-governance]
 people: [kateryna-pereverza]
 funder: Formas
 start: 2023-01-01
-end: 2026-12-31
+end: 2027-12-31
 ---
 
 Single urban experiments rarely add up to wider system innovation. This project explores how a portfolio approach can connect them and give transitions a direction. It draws on theories of change in social systems, such as the multi-level perspective, leverage points and resilience thinking, to support the design, sensemaking and monitoring of transformative portfolios. It also looks at how data-based digital tools can make portfolios a platform for strategic learning in cities.
