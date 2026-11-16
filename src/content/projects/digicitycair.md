@@ -12,4 +12,4 @@ Cities need more urban nature to cope with heat, flooding and air pollution, but
 
 This Vinnova planning grant prepares a proposal to the Horizon Europe New European Bauhaus call (HORIZON-MISS-2027-07-CLIMA-CIT-NEB-01): recruiting cities and partners, agreeing use cases and demonstration sites, and writing the proposal.
 
-Led by Anne Håkansson (KTH Department of Computing and Learning Systems), with Karolinska Institutet, Stockholm University and Björk Innovation, and unfunded partners in Greece, the UK, Spain and ICLEI. Oleksii Pasichnyi leads the work package on impact, implementation and budget and contributes the buildings and energy use cases.
+Led by Anne Håkansson (KTH Department of Computing and Learning Systems), with Karolinska Institutet, Stockholm University and Björk Innovation, and unfunded partners in Greece, the UK, Spain and ICLEI. Oleksii Pasichnyi is co-project leader. He leads the work package on impact, implementation and budget and contributes the buildings and energy use cases.
